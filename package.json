@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bnb:status:test": "bun scripts/test-bnb-hub-status.mjs"
+    "bnb:status:test": "bun scripts/test-bnb-hub-status.mjs",
+    "guard:data:test": "node scripts/test-guard-local-only-data.mjs"
   }
 }
