@@ -1,0 +1,26 @@
+name: Guard local-only data
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+permissions:
+  contents: read
+jobs:
+  guard-local-only-data:
+    name: Block local-only data files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Reject tracked local-only data files
+        shell: bash
+        run: |
+          set -euo pipefail
+          blocked_files="$(git ls-files | grep -E '(^|/)[^/]*\.data$' || true)"
+          if [ -n "$blocked_files" ]; then
+            echo "::error::Tracked .data files are not allowed. Keep account, login, and scan data local-only."
+            printf '%s\n' "$blocked_files"
+            exit 1
+          fi
+          echo "No tracked local-only data files found."
