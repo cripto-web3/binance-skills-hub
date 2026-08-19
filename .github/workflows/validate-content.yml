@@ -8,6 +8,8 @@ on:
       - "**/*.yaml"
       - ".markdownlint-cli2.yaml"
       - ".github/workflows/validate-content.yml"
+      - "package.json"
+      - "scripts/**/*.mjs"
   push:
     branches:
       - main
@@ -17,6 +19,8 @@ on:
       - "**/*.yaml"
       - ".markdownlint-cli2.yaml"
       - ".github/workflows/validate-content.yml"
+      - "package.json"
+      - "scripts/**/*.mjs"
 
 permissions:
   contents: read
@@ -39,3 +43,14 @@ jobs:
         uses: actions/checkout@v4
       - name: Lint Markdown links and references
         run: npx --yes markdownlint-cli2@0.17.2
+
+  test-bnb-hub-status:
+    name: Test BNB Hub status schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Test local-only status schema
+        run: bun run bnb:status:test

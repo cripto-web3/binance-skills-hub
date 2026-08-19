@@ -1,0 +1,8 @@
+{
+  "name": "binance-skills-hub-ci",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bnb:status:test": "bun scripts/test-bnb-hub-status.mjs"
+  }
+}
