@@ -1,0 +1,10 @@
+{
+  "name": "binance-skills-hub-ci",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "bnb:status:test": "bun scripts/test-bnb-hub-status.mjs",
+    "guard:data:test": "node scripts/test-guard-local-only-data.mjs",
+    "qrcode:test": "bun scripts/test-qrcode-schema.mjs"
+  }
+}

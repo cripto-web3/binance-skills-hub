@@ -1,1 +1,7 @@
 .idea/
+
+# Keep runtime account, login, and scan data on the local machine only.
+.data
+**/.data
+*.data
+**/*.data
