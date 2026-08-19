@@ -2,8 +2,8 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-/** Matches every tracked file whose basename ends exactly in .data. */
-export const localOnlyDataPattern = /(^|\/)[^/]*\.data$/;
+/** Matches every tracked file whose basename ends in .data, case-insensitively. */
+export const localOnlyDataPattern = /(^|\/)[^/]*\.data$/i;
 
 export function findTrackedLocalOnlyData(fileNames) {
   return fileNames.filter((fileName) => localOnlyDataPattern.test(fileName));
