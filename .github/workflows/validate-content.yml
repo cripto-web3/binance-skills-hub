@@ -54,3 +54,14 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Test local-only status schema
         run: bun run bnb:status:test
+
+  test-qrcode-schema:
+    name: Test QR metadata schema
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+      - name: Test offline QR metadata schema
+        run: bun run qrcode:test
