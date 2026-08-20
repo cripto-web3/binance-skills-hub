@@ -76,7 +76,7 @@ jobs:
 
           echo "--- binance-cli spot ping ---"
           binance-cli spot ping 2>&1 | tee /tmp/cli-ping-all.log || true
-          if ! grep -q -E "ping|\{\}" /tmp/cli-ping-all.log; then
+          if ! grep -q -E "serverTime" /tmp/cli-ping-all.log; then
               tail -c 400 /tmp/cli-ping-all.log; exit 1
           fi
 
@@ -107,7 +107,7 @@ jobs:
 
           echo "--- binance-cli spot server-time ---"
           binance-cli spot time 2>&1 | tee /tmp/cli-time-all.log || true
-          if ! grep -q -E "serverTime|time|\{\}" /tmp/cli-time-all.log; then
+          if ! grep -q -E "serverTime|time" /tmp/cli-time-all.log; then
               tail -c 400 /tmp/cli-time-all.log; exit 1
           fi
 
