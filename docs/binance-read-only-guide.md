@@ -144,6 +144,6 @@ python3 scripts/test-key-read-only.py
 
 1. **Revocation**: ถ้าคีเคยถูกเผยแพร่ ให้ลบทันทีที่ Binance → API Management แล้วสร้างคู่ใหม่
 2. **IP Allowlist**: เพิ่ม IP ของเครื่องที่ใช้จริง (เช่น sandbox IP ของ Manus) เพื่อปิดกั้นการใช้จากที่อื่น
-3. **Endpoint Geo**: ครัวเครื้ อข่ายบาง IP ถูกกีดกัน (451 Service unavailable) — ใช้ mirror `https://api1.binance.com` หรือ `https://data-api.binance.vision` เป็นแผนสำรอง
+3. **Endpoint Geo (451)**: เครือข่ายบาง IP ถูกกีดกั น (451 Service unavailable) — นโยบาย repo นี้คือใช้ `api.binance.com` ตรงเท่านั้ น (ไม่มี mirror) หาก IP ถูกกีดกั นให้เปลี่ยนเครื่อง/เครือข่ายแทน
 4. **ไม่ share คี่**: คี + secret = กุญแจเข้าบัญชี — อย่าใส่ในชัท โค้ดสาธารณะ หรือ commit
 5. **Clock skew**: ถ้า server-time ผิดเกิน ±5000ms จะได้ -1021 — รัน `binance-cli spot server-time` เทียบกับนาฬิการะบบ

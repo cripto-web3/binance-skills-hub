@@ -110,5 +110,5 @@ python3 -c "import json; print(json.load(open('/tmp/trigger-test/binance-1h.data
 
 - `.env` / `scripts/write-env.sh` มีค่าจริง → gitignore บังคับ ไม่เคย commit
 - `.env.example` มีค่าปลอม → ปลอดภัยต่อการเผยแพร่
-- Geo-restricted runner (เช่น US) จะ fallback ใช้ mirror `data-api.binance.vision`
+- ตามนโยบาย repo: ใช้ `api.binance.com` ตรงเท่านั้ น (ไม่มี mirror fallback) — เครือข่ายที่ถูกกีดกั น (451) จะ fail ทันที
 - Futures funding อาจถูกบล็อกในบางภูมิภาค → หมวด `funding` จะแสดง error message แทน (ไม่ fail ทั้ง workflow)
