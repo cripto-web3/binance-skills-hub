@@ -63,8 +63,10 @@ jobs:
             echo "api.binance.com unreachable from this runner (likely geo-blocked)"
             echo "Reachable base URL: api.binance.com"
           fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
-      - name: Test public market endpoints via binance-cli
+      - name: Test public market endpoints via binance-cli (skip on geo-block)
+        if: steps.reachability.outputs.code == '200'
         env:
           BINANCE_BASE_URL: ${{ steps.reachability.outputs.base }}
         run: |
@@ -107,7 +109,14 @@ jobs:
               tail -c 400 /tmp/cli-time-all.log; exit 1
           fi
 
-      - name: Test futures public endpoint (spot-only patch covers common lib)
+      - name: Geo-blocked runner notice (no mirror per repo policy)
+        if: steps.reachability.outputs.code != '200'
+        run: |
+          echo "api.binance.com HTTP ${{ steps.reachability.outputs.code }} from this runner (geo-blocked)."
+          echo "Spot/futures CLI tests skipped per repo policy (no mirror); sandbox tests remain authoritative."
+
+      - name: Test futures public endpoint (spot-only patch covers common lib; skip on geo-block)
+        if: steps.reachability.outputs.code == "200"
         run: |
           set -euo pipefail
           # On geo-restricted runners the futures CLI prints no error text and
