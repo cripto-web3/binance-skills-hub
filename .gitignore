@@ -8,16 +8,11 @@
 # Secrets / credentials / environment variables (kept local only)
 # -----------------------------------------------------------------------------
 .env
-.env.*
-!.env.example
 .env-*
 *.env
-*.env.*
-**/.env
-**/.env.*
-**/.env-*
 .env.local
 .env.*.local
+!.env.example
 
 # API keys, tokens, wallets
 *.key
