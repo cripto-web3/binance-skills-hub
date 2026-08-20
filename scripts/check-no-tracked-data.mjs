@@ -6,7 +6,7 @@ import path from "node:path";
 export const localOnlyDataPattern = /(^|\/)[^/]*\.data$/i;
 
 // Scheduled workflow output that is allowed to be tracked (read-only market data).
-export const allowedTrackedData = ["data/binance-1h.data"];
+export const allowedTrackedData = ["data/binance-1h.data", "data/binance-daily.data"];
 
 export function findTrackedLocalOnlyData(fileNames) {
   return fileNames
@@ -18,9 +18,9 @@ function main() {
   const trackedFiles = execFileSync("git", ["ls-files"], { encoding: "utf8" })
     .split("\n")
     .filter(Boolean);
-  // Opt-in: `data/binance-1h.data` is the scheduled hourly workflow output
-  // (read-only market data) produced by .github/workflows/binance-1h-data.yml.
-  const allowed = ["data/binance-1h.data"];
+  // Opt-in: the scheduled workflow outputs are allowed to be tracked
+  // (read-only market data). See the workflow files for provenance.
+  const allowed = ["data/binance-1h.data", "data/binance-daily.data"];
   const blockedFiles = findTrackedLocalOnlyData(
     trackedFiles.filter((f) => !allowed.includes(f)),
   );

@@ -20,6 +20,7 @@
     "docs/status.data.json",
     "fixtures/data.txt",
     "openclaw/status/summary.yml",
-    "data/binance-1h.data"
+    "data/binance-1h.data",
+    "data/binance-daily.data"
   ]
 }
