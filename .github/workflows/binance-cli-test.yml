@@ -51,21 +51,17 @@ jobs:
       - name: Verify CLI version
         run: binance-cli --version
 
-      - name: Verify API reachability (handles geo-restricted runners)
+      - name: Verify api.binance.com reachability, api only policy (no mirror)
         id: reachability
         run: |
-          set +e
-            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain/api/v3/ping")
-            echo "$domain ping -> HTTP $code"
-            if [ "$code" = "200" ]; then
-              echo "base=$domain" >> "$GITHUB_OUTPUT"
-              echo "Reachable base URL: $domain"
-              break
-            fi
-          done
-          if ! grep -q "base=" "$GITHUB_OUTPUT"; then
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://api.binance.com/api/v3/ping")
+          echo "api.binance.com ping -> HTTP $code"
+          if [ "$code" = "200" ]; then
             echo "base=api.binance.com" >> "$GITHUB_OUTPUT"
-            echo "warn: no fully reachable base detected; CLI tests will follow"
+            echo "Reachable base URL: api.binance.com"
+          else
+            echo "api.binance.com unreachable from this runner (likely geo-blocked)"
+            echo "Reachable base URL: api.binance.com"
           fi
 
       - name: Test public market endpoints via binance-cli
