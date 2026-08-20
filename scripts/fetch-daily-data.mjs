@@ -148,6 +148,41 @@ async function collectOndoStatement() {
   }
 }
 
+// Full Ondo tokenized-stock inventory (public): 445 unique tickers across
+// 1,330 chain deployments. Income-statement figures (revenue/net income/EBITDA/
+// margins) are NOT exposed by Binance public APIs — the app's Financials tab uses
+// an internal backend; keep per-stock fundamentals (P/E, dividend yield,
+// 52-week range) and the daily attestation PDF links instead.
+async function collectStockInventory() {
+  try {
+    const list = await fetchJson(`${BAPI}/stock/detail/list/ai?type=1`);
+    const rows = list.data ?? [];
+    const tickers = new Map();
+    for (const r of rows) {
+      const t = (r.ticker ?? '').toUpperCase();
+      if (!t) continue;
+      // keep first deployment per ticker (chain/contract are internal only)
+      if (!tickers.has(t)) tickers.set(t, { ticker: t, symbol: r.symbol, name: r.name ?? null });
+    }
+    // daily attestation report path per stock (from meta endpoint sample)
+    let dailyPdf = null;
+    try {
+      const first = rows[0];
+      const meta = await fetchJson(`${BAPI}/meta/ai?chainId=${first.chainId}&contractAddress=${first.contractAddress}`);
+      dailyPdf = (meta.data && meta.data.dailyAttestationReports) || null;
+    } catch { /* non-fatal */ }
+    return {
+      total_deployments: rows.length,
+      unique_tickers: tickers.size,
+      daily_attestation_pdf_pattern: '/images/web3-data/public/token/ondo/pdf/daily-YYYY-MM-DD.pdf',
+      sample_daily_pdf: dailyPdf,
+      tickers: [...tickers.values()],
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 async function collectMarket24h() {
   const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
   const up = all.filter(x => +x.priceChangePercent > 0).length;
@@ -180,6 +215,7 @@ async function run() {
   const balances = await collectBalances();
   const ondo = await collectOndoStatement();
   const market = await collectMarket24h();
+  const inventory = await collectStockInventory();
   const payload = {
     generated_at: new Date().toISOString(),
     generated_by: 'scripts/fetch-daily-data.mjs',
@@ -192,6 +228,7 @@ async function run() {
     binance_identity: identity,
     balances: balances,
     ondo_statement: ondo,
+    stock_inventory: inventory,
     market_24h: market,
     summary: computeSummary({ identity, balances, ondo }),
     elapsed_ms: Date.now() - started,
