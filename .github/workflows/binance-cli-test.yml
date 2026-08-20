@@ -76,16 +76,19 @@ jobs:
           set -euo pipefail
 
           echo "--- binance-cli spot ping ---"
-          if ! binance-cli spot ping 2>/tmp/cli-ping-stderr.log; then
+          binance-cli spot ping 2>/tmp/cli-ping-stderr.log | tee /tmp/cli-ping.json || true
+          if ! grep -q "ping" /tmp/cli-ping.json; then
             if grep -q "restricted location" /tmp/cli-ping-stderr.log; then
-              curl -sf "https://data-api.binance.vision/api/v3/ping" && echo " (via data-api.binance.vision mirror)"
+              echo "runner region is restricted by Binance; switching to data-api mirror"
+              curl -sf "https://data-api.binance.vision/api/v3/ping" | tee /tmp/cli-ping.json
             else
               tail -c 400 /tmp/cli-ping-stderr.log; exit 1
             fi
           fi
 
           echo "--- binance-cli spot ticker BTCUSDT (primary, mirror fallback) ---"
-          if ! binance-cli spot ticker --symbol BTCUSDT 2>/tmp/cli-stderr.log | tee /tmp/cli-out.json; then
+          binance-cli spot ticker --symbol BTCUSDT 2>/tmp/cli-stderr.log | tee /tmp/cli-out.json || true
+          if ! grep -q "BTCUSDT" /tmp/cli-out.json; then
             if grep -q "restricted location" /tmp/cli-stderr.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
               # data-api.binance.vision mirrors public market data endpoints
@@ -104,8 +107,10 @@ jobs:
           PYEOF
 
           echo "--- binance-cli spot exchange-info (primary, mirror fallback) ---"
-          if ! binance-cli spot exchange-info 2>/tmp/cli-stderr2.log | tee /tmp/cli-exchange.json; then
+          binance-cli spot exchange-info 2>/tmp/cli-stderr2.log | tee /tmp/cli-exchange.json || true
+          if ! grep -q "BTCUSDT" /tmp/cli-exchange.json; then
             if grep -q "restricted location" /tmp/cli-stderr2.log; then
+              echo "runner region is restricted by Binance; switching to data-api mirror"
               curl -sf "https://data-api.binance.vision/api/v3/exchangeInfo" > /tmp/cli-exchange.json
             else
               echo "stderr: $(tail -c 400 /tmp/cli-stderr2.log)"
@@ -122,9 +127,11 @@ jobs:
           PYEOF
 
           echo "--- binance-cli spot server-time ---"
-          if ! binance-cli spot server-time 2>/tmp/cli-time-stderr.log; then
+          binance-cli spot server-time 2>/tmp/cli-time-stderr.log | tee /tmp/cli-time.json || true
+          if ! grep -q "serverTime" /tmp/cli-time.json; then
             if grep -q "restricted location" /tmp/cli-time-stderr.log; then
-              curl -sf "https://data-api.binance.vision/api/v3/time" && echo " (via data-api.binance.vision mirror)"
+              echo "runner region is restricted by Binance; switching to data-api mirror"
+              curl -sf "https://data-api.binance.vision/api/v3/time" | tee /tmp/cli-time.json
             else
               tail -c 400 /tmp/cli-time-stderr.log; exit 1
             fi
@@ -133,7 +140,8 @@ jobs:
       - name: Test futures public endpoint (spot-only patch covers common lib)
         run: |
           set -euo pipefail
-          if binance-cli usds-futures exchange-info 2>/tmp/fut-stderr.log | tee /tmp/fut-out.json; then
+          binance-cli usds-futures exchange-info 2>/tmp/fut-stderr.log | tee /tmp/fut-out.json || true
+          if grep -q "symbols" /tmp/fut-out.json; then
             python3 - <<'PYEOF'
           import json
           data = json.load(open('/tmp/fut-out.json'))
