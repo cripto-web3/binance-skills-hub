@@ -51,37 +51,6 @@ jobs:
       - name: Verify CLI version
         run: binance-cli --version
 
-      - name: Test public market endpoints
-        run: |
-          set -euo pipefail
-
-          echo "--- binance-cli spot ping ---"
-          binance-cli spot ping 2>&1
-
-          echo "--- binance-cli spot ticker BTCUSDT ---"
-          binance-cli spot ticker --symbol BTCUSDT 2> >(tee /tmp/cli-stderr.log >&2) | tee /tmp/cli-out.json
-          python3 - <<'PYEOF'
-          import json
-          data = json.load(open('/tmp/cli-out.json'))
-          assert data['symbol'] == 'BTCUSDT', 'unexpected symbol'
-          assert float(data['lastPrice']) > 0, 'price not positive'
-          print('ticker OK:', data['symbol'], data['lastPrice'])
-          PYEOF
-
-          echo "--- binance-cli spot exchange-info (spot symbols only) ---"
-          binance-cli spot exchange-info 2> >(tee /tmp/cli-stderr2.log >&2) | tee /tmp/cli-exchange.json
-          python3 - <<'PYEOF'
-          import json
-          data = json.load(open('/tmp/cli-exchange.json'))
-          symbols = [s['symbol'] for s in data['symbols'] if s['status'] == 'TRADING']
-          assert len(symbols) > 500, f'expected >500 trading symbols, got {len(symbols)}'
-          assert 'BTCUSDT' in symbols, 'BTCUSDT missing'
-          print('exchange-info OK: trading symbols =', len(symbols))
-          PYEOF
-
-          echo "--- binance-cli spot server-time ---"
-          binance-cli spot server-time 2>&1
-
       - name: Verify API reachability (handles geo-restricted runners)
         id: reachability
         run: |
@@ -107,7 +76,13 @@ jobs:
           set -euo pipefail
 
           echo "--- binance-cli spot ping ---"
-          binance-cli spot ping 2>&1
+          if ! binance-cli spot ping 2>/tmp/cli-ping-stderr.log; then
+            if grep -q "restricted location" /tmp/cli-ping-stderr.log; then
+              curl -sf "https://data-api.binance.vision/api/v3/ping" && echo " (via data-api.binance.vision mirror)"
+            else
+              tail -c 400 /tmp/cli-ping-stderr.log; exit 1
+            fi
+          fi
 
           echo "--- binance-cli spot ticker BTCUSDT (primary, mirror fallback) ---"
           if ! binance-cli spot ticker --symbol BTCUSDT 2>/tmp/cli-stderr.log | tee /tmp/cli-out.json; then
@@ -147,7 +122,13 @@ jobs:
           PYEOF
 
           echo "--- binance-cli spot server-time ---"
-          binance-cli spot server-time 2>&1
+          if ! binance-cli spot server-time 2>/tmp/cli-time-stderr.log; then
+            if grep -q "restricted location" /tmp/cli-time-stderr.log; then
+              curl -sf "https://data-api.binance.vision/api/v3/time" && echo " (via data-api.binance.vision mirror)"
+            else
+              tail -c 400 /tmp/cli-time-stderr.log; exit 1
+            fi
+          fi
 
       - name: Test futures public endpoint (spot-only patch covers common lib)
         run: |
