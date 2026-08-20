@@ -33,6 +33,23 @@ const KEY = process.env.BINANCE_API_KEY || '';
 const SECRET = process.env.BINANCE_API_SECRET || '';
 const STOCKS = (process.env.BINANCE_STOCKS || 'GOOGL,AAPL,TSLA').split(',');
 
+// Sensitive stock identifiers (chainId/contractAddress/multiplier) are NEVER
+// fetched from the public API response into the output — they are loaded from
+// .env only (BINANCE_STOCK_MAP, JSON object) per the privacy policy.
+let STOCK_MAP = {};
+try {
+  let raw = process.env.BINANCE_STOCK_MAP ?? '';
+  // bash single-quoted values may survive `source` verbatim; strip wrapper
+  // quotes if present (JSON must start with '{').
+  raw = raw.trim();
+  if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
+    raw = raw.slice(1, -1).trim();
+  }
+  if (raw) STOCK_MAP = JSON.parse(raw);
+} catch {
+  STOCK_MAP = {};
+}
+
 mkdirSync(DATA_DIR, { recursive: true });
 
 const ONDO_UA = { 'Accept-Encoding': 'identity', 'User-Agent': 'binance-web3/1.1 (Skill)' };
@@ -100,13 +117,18 @@ async function collectOndoStatement() {
     const list = await fetchJson(listUrl, { headers: ONDO_UA });
     // Each ticker may deploy on multiple chains (Ethereum + BSC); keep the first
     // occurrence per ticker so each stock appears exactly once.
-    const rows = (list.data ?? [])
-      .filter(r => STOCKS.includes((r.ticker ?? '').toUpperCase()))
-      .filter((r, idx, arr) => arr.findIndex(x => (x.ticker ?? '').toUpperCase() === (r.ticker ?? '').toUpperCase()) === idx);
+    const rows = (list.data ?? []).filter(r => STOCKS.includes((r.ticker ?? '').toUpperCase()));
     const assets = [];
     for (const r of rows) {
+      // Identifiers come ONLY from BINANCE_STOCK_MAP (.env) — never from the
+      // public API response and never written to the output file (privacy).
+      const id = STOCK_MAP[(r.ticker ?? '').toUpperCase()];
+      if (!id || !id.contractAddress || !id.chainId) {
+        assets.push({ ticker: r.ticker, symbol: r.symbol, error: 'no stock map entry in BINANCE_STOCK_MAP' });
+        continue;
+      }
       // API 5: RWA Dynamic — /bapi/defi/v2/public/.../rwa/dynamic/ai
-      const dynUrl = `https://www.binance.com/bapi/defi/v2/public/wallet-direct/buw/wallet/market/token/rwa/dynamic/ai?chainId=${r.chainId}&contractAddress=${r.contractAddress}`;
+      const dynUrl = `https://www.binance.com/bapi/defi/v2/public/wallet-direct/buw/wallet/market/token/rwa/dynamic/ai?chainId=${id.chainId}&contractAddress=${id.contractAddress}`;
       try {
         const dyn = await fetchJson(dynUrl, { headers: ONDO_UA });
         const d = dyn.data ?? {};
@@ -119,7 +141,7 @@ async function collectOndoStatement() {
           symbol: r.symbol,
           token_price: ti.price ?? null,
           stock_price_usd: si.price ?? null,
-          reference_price: si.price && r.multiplier ? (+si.price / +r.multiplier).toFixed(2) : null,
+          reference_price: si.price && id.multiplier ? (+si.price / +id.multiplier).toFixed(2) : null,
           price_change_pct_24h: ti.priceChangePct24h ?? null,
           pe_ratio: si.priceToEarnings ?? null,
           dividend_yield_pct: si.dividendYield ?? null,
