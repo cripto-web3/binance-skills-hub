@@ -77,7 +77,7 @@ jobs:
 
           echo "--- binance-cli spot ping ---"
           binance-cli spot ping 2>&1 | tee /tmp/cli-ping-all.log || true
-          if ! grep -q "ping" /tmp/cli-ping-all.log; then
+          if ! grep -q -E "ping|\{\}" /tmp/cli-ping-all.log; then
             if grep -q "restricted location" /tmp/cli-ping-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
               curl -sf "https://data-api.binance.vision/api/v3/ping" | tee /tmp/cli-ping-all.log
@@ -127,8 +127,8 @@ jobs:
           PYEOF
 
           echo "--- binance-cli spot server-time ---"
-          binance-cli spot server-time 2>&1 | tee /tmp/cli-time-all.log || true
-          if ! grep -q "serverTime\|\{" /tmp/cli-time-all.log; then
+          binance-cli spot time 2>&1 | tee /tmp/cli-time-all.log || true
+          if ! grep -q -E "serverTime|time|\{\}" /tmp/cli-time-all.log; then
             if grep -q "restricted location" /tmp/cli-time-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
               # data-api.binance.vision mirrors public market data but has no /time;
