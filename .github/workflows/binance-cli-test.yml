@@ -76,50 +76,50 @@ jobs:
           set -euo pipefail
 
           echo "--- binance-cli spot ping ---"
-          binance-cli spot ping 2>/tmp/cli-ping-stderr.log | tee /tmp/cli-ping.json || true
-          if ! grep -q "ping" /tmp/cli-ping.json; then
-            if grep -q "restricted location" /tmp/cli-ping-stderr.log; then
+          binance-cli spot ping 2>&1 | tee /tmp/cli-ping-all.log || true
+          if ! grep -q "ping" /tmp/cli-ping-all.log; then
+            if grep -q "restricted location" /tmp/cli-ping-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
-              curl -sf "https://data-api.binance.vision/api/v3/ping" | tee /tmp/cli-ping.json
+              curl -sf "https://data-api.binance.vision/api/v3/ping" | tee /tmp/cli-ping-all.log
             else
-              tail -c 400 /tmp/cli-ping-stderr.log; exit 1
+              tail -c 400 /tmp/cli-ping-all.log; exit 1
             fi
           fi
 
           echo "--- binance-cli spot ticker BTCUSDT (primary, mirror fallback) ---"
-          binance-cli spot ticker --symbol BTCUSDT 2>/tmp/cli-stderr.log | tee /tmp/cli-out.json || true
-          if ! grep -q "BTCUSDT" /tmp/cli-out.json; then
-            if grep -q "restricted location" /tmp/cli-stderr.log; then
+          binance-cli spot ticker --symbol BTCUSDT 2>&1 | tee /tmp/cli-ticker-all.log || true
+          if ! grep -q "BTCUSDT" /tmp/cli-ticker-all.log; then
+            if grep -q "restricted location" /tmp/cli-ticker-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
               # data-api.binance.vision mirrors public market data endpoints
-              curl -sf "https://data-api.binance.vision/api/v3/ticker?symbol=BTCUSDT" > /tmp/cli-out.json
+              curl -sf "https://data-api.binance.vision/api/v3/ticker?symbol=BTCUSDT" > /tmp/cli-ticker-all.log
             else
-              echo "stderr: $(tail -c 400 /tmp/cli-stderr.log)"
+              echo "stderr: $(tail -c 400 /tmp/cli-ticker-all.log)"
               exit 1
             fi
           fi
           python3 - <<'PYEOF'
           import json
-          data = json.load(open('/tmp/cli-out.json'))
+          data = json.load(open('/tmp/cli-ticker-all.log'))
           assert data['symbol'] == 'BTCUSDT', 'unexpected symbol'
           assert float(data['lastPrice']) > 0, 'price not positive'
           print('ticker OK:', data['symbol'], data['lastPrice'])
           PYEOF
 
           echo "--- binance-cli spot exchange-info (primary, mirror fallback) ---"
-          binance-cli spot exchange-info 2>/tmp/cli-stderr2.log | tee /tmp/cli-exchange.json || true
-          if ! grep -q "BTCUSDT" /tmp/cli-exchange.json; then
-            if grep -q "restricted location" /tmp/cli-stderr2.log; then
+          binance-cli spot exchange-info 2>&1 | tee /tmp/cli-exch-all.log || true
+          if ! grep -q "BTCUSDT" /tmp/cli-exch-all.log; then
+            if grep -q "restricted location" /tmp/cli-exch-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
-              curl -sf "https://data-api.binance.vision/api/v3/exchangeInfo" > /tmp/cli-exchange.json
+              curl -sf "https://data-api.binance.vision/api/v3/exchangeInfo" > /tmp/cli-exch-all.log
             else
-              echo "stderr: $(tail -c 400 /tmp/cli-stderr2.log)"
+              echo "stderr: $(tail -c 400 /tmp/cli-exch-all.log)"
               exit 1
             fi
           fi
           python3 - <<'PYEOF'
           import json
-          data = json.load(open('/tmp/cli-exchange.json'))
+          data = json.load(open('/tmp/cli-exch-all.log'))
           symbols = [s['symbol'] for s in data['symbols'] if s['status'] == 'TRADING']
           assert len(symbols) > 500, f'expected >500 trading symbols, got {len(symbols)}'
           assert 'BTCUSDT' in symbols, 'BTCUSDT missing'
@@ -127,31 +127,31 @@ jobs:
           PYEOF
 
           echo "--- binance-cli spot server-time ---"
-          binance-cli spot server-time 2>/tmp/cli-time-stderr.log | tee /tmp/cli-time.json || true
-          if ! grep -q "serverTime" /tmp/cli-time.json; then
-            if grep -q "restricted location" /tmp/cli-time-stderr.log; then
+          binance-cli spot server-time 2>&1 | tee /tmp/cli-time-all.log || true
+          if ! grep -q "serverTime" /tmp/cli-time-all.log; then
+            if grep -q "restricted location" /tmp/cli-time-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
-              curl -sf "https://data-api.binance.vision/api/v3/time" | tee /tmp/cli-time.json
+              curl -sf "https://data-api.binance.vision/api/v3/time" | tee /tmp/cli-time-all.log
             else
-              tail -c 400 /tmp/cli-time-stderr.log; exit 1
+              tail -c 400 /tmp/cli-time-all.log; exit 1
             fi
           fi
 
       - name: Test futures public endpoint (spot-only patch covers common lib)
         run: |
           set -euo pipefail
-          binance-cli usds-futures exchange-info 2>/tmp/fut-stderr.log | tee /tmp/fut-out.json || true
-          if grep -q "symbols" /tmp/fut-out.json; then
+          binance-cli usds-futures exchange-info 2>&1 | tee /tmp/cli-fut-all.log || true
+          if grep -q "symbols" /tmp/cli-fut-all.log; then
             python3 - <<'PYEOF'
           import json
-          data = json.load(open('/tmp/fut-out.json'))
+          data = json.load(open('/tmp/cli-fut-all.log'))
           print('usds-futures exchange-info OK:', len(data.get('symbols', [])), 'symbols')
           PYEOF
           else
-            if grep -q "restricted location" /tmp/fut-stderr.log; then
+            if grep -q "restricted location" /tmp/cli-fut-all.log; then
               echo "futures endpoints geo-restricted on this runner; skipping futures test"
             else
-              echo "stderr: $(tail -c 400 /tmp/fut-stderr.log)"
+              echo "stderr: $(tail -c 400 /tmp/cli-fut-all.log)"
               exit 1
             fi
           fi
