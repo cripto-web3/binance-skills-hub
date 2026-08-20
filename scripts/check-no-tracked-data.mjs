@@ -5,15 +5,25 @@ import path from "node:path";
 /** Matches every tracked file whose basename ends in .data, case-insensitively. */
 export const localOnlyDataPattern = /(^|\/)[^/]*\.data$/i;
 
+// Scheduled workflow output that is allowed to be tracked (read-only market data).
+export const allowedTrackedData = ["data/binance-1h.data"];
+
 export function findTrackedLocalOnlyData(fileNames) {
-  return fileNames.filter((fileName) => localOnlyDataPattern.test(fileName));
+  return fileNames
+    .filter((fileName) => !allowedTrackedData.includes(fileName))
+    .filter((fileName) => localOnlyDataPattern.test(fileName));
 }
 
 function main() {
   const trackedFiles = execFileSync("git", ["ls-files"], { encoding: "utf8" })
     .split("\n")
     .filter(Boolean);
-  const blockedFiles = findTrackedLocalOnlyData(trackedFiles);
+  // Opt-in: `data/binance-1h.data` is the scheduled hourly workflow output
+  // (read-only market data) produced by .github/workflows/binance-1h-data.yml.
+  const allowed = ["data/binance-1h.data"];
+  const blockedFiles = findTrackedLocalOnlyData(
+    trackedFiles.filter((f) => !allowed.includes(f)),
+  );
 
   if (blockedFiles.length > 0) {
     console.error(

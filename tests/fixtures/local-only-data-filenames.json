@@ -19,6 +19,7 @@
     ".data.example",
     "docs/status.data.json",
     "fixtures/data.txt",
-    "openclaw/status/summary.yml"
+    "openclaw/status/summary.yml",
+    "data/binance-1h.data"
   ]
 }

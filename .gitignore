@@ -29,6 +29,8 @@
 **/.data
 *.data
 **/*.data
+# Opt-in: hourly scheduled workflow output (read-only market data, refreshed every 1H)
+!data/binance-1h.data
 *.sqlite
 *.db
 **/*.db
