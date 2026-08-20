@@ -1,0 +1,347 @@
+{
+ "quarterly": {
+  "labels": [
+   "Q1 2023",
+   "Q2 2023",
+   "Q3 2023",
+   "Q4 2023",
+   "Q1 2024",
+   "Q2 2024",
+   "Q3 2024",
+   "Q4 2024",
+   "Q1 2025",
+   "Q2 2025",
+   "Q3 2025",
+   "Q4 2025",
+   "Q1 2026",
+   "Q2 2026"
+  ],
+  "revenue": [
+   28645,
+   31999,
+   34146,
+   40111,
+   36455,
+   39071,
+   40589,
+   48385,
+   42314,
+   47516,
+   51242,
+   59893,
+   56311,
+   60801
+  ],
+  "grossProfit": [
+   21167,
+   24313,
+   26205,
+   30836,
+   27797,
+   29856,
+   31223,
+   37166,
+   32474,
+   37210,
+   39800,
+   47813,
+   45038,
+   49465
+  ],
+  "opIncome": [
+   9435,
+   11431,
+   13736,
+   16936,
+   14889,
+   14880,
+   17352,
+   23505,
+   15868,
+   18374,
+   20715,
+   25272,
+   23561,
+   18782
+  ],
+  "netIncome": [
+   5709,
+   7788,
+   11583,
+   14017,
+   12369,
+   13465,
+   15688,
+   20838,
+   16644,
+   18337,
+   2709,
+   22768,
+   26773,
+   15848
+  ]
+ },
+ "annual": {
+  "labels": [
+   "2020",
+   "2021",
+   "2022",
+   "2023",
+   "2024",
+   "2025"
+  ],
+  "revenue": [
+   85965,
+   117929,
+   116609,
+   134902,
+   164501,
+   200966
+  ],
+  "grossProfit": [
+   69900,
+   97432,
+   92855,
+   108943,
+   134340,
+   164791
+  ],
+  "opIncome": [
+   32671,
+   46753,
+   33555,
+   46751,
+   69380,
+   83276
+  ],
+  "netIncome": [
+   29146,
+   39370,
+   23200,
+   39098,
+   62360,
+   68098
+  ]
+ },
+ "ttm": {
+  "labels": [
+   "TTM\n(through 2026/Q2)"
+  ],
+  "revenue": [
+   228247
+  ],
+  "grossProfit": [
+   186586
+  ],
+  "opIncome": [
+   86926
+  ],
+  "netIncome": [
+   68098
+  ]
+ },
+ "quarterly_margins": [
+  {
+   "period": "Q1 2023",
+   "revenue": 28645,
+   "gross_profit": 21167,
+   "operating_income": 9435,
+   "net_income": 5709,
+   "gross_margin_pct": 73.89,
+   "operating_margin_pct": 32.94,
+   "profit_margin_pct": 19.93
+  },
+  {
+   "period": "Q2 2023",
+   "revenue": 31999,
+   "gross_profit": 24313,
+   "operating_income": 11431,
+   "net_income": 7788,
+   "gross_margin_pct": 75.98,
+   "operating_margin_pct": 35.72,
+   "profit_margin_pct": 24.34
+  },
+  {
+   "period": "Q3 2023",
+   "revenue": 34146,
+   "gross_profit": 26205,
+   "operating_income": 13736,
+   "net_income": 11583,
+   "gross_margin_pct": 76.74,
+   "operating_margin_pct": 40.23,
+   "profit_margin_pct": 33.92
+  },
+  {
+   "period": "Q4 2023",
+   "revenue": 40111,
+   "gross_profit": 30836,
+   "operating_income": 16936,
+   "net_income": 14017,
+   "gross_margin_pct": 76.88,
+   "operating_margin_pct": 42.22,
+   "profit_margin_pct": 34.95
+  },
+  {
+   "period": "Q1 2024",
+   "revenue": 36455,
+   "gross_profit": 27797,
+   "operating_income": 14889,
+   "net_income": 12369,
+   "gross_margin_pct": 76.25,
+   "operating_margin_pct": 40.84,
+   "profit_margin_pct": 33.93
+  },
+  {
+   "period": "Q2 2024",
+   "revenue": 39071,
+   "gross_profit": 29856,
+   "operating_income": 14880,
+   "net_income": 13465,
+   "gross_margin_pct": 76.41,
+   "operating_margin_pct": 38.08,
+   "profit_margin_pct": 34.46
+  },
+  {
+   "period": "Q3 2024",
+   "revenue": 40589,
+   "gross_profit": 31223,
+   "operating_income": 17352,
+   "net_income": 15688,
+   "gross_margin_pct": 76.92,
+   "operating_margin_pct": 42.75,
+   "profit_margin_pct": 38.65
+  },
+  {
+   "period": "Q4 2024",
+   "revenue": 48385,
+   "gross_profit": 37166,
+   "operating_income": 23505,
+   "net_income": 20838,
+   "gross_margin_pct": 76.81,
+   "operating_margin_pct": 48.58,
+   "profit_margin_pct": 43.07
+  },
+  {
+   "period": "Q1 2025",
+   "revenue": 42314,
+   "gross_profit": 32474,
+   "operating_income": 15868,
+   "net_income": 16644,
+   "gross_margin_pct": 76.75,
+   "operating_margin_pct": 37.5,
+   "profit_margin_pct": 39.33
+  },
+  {
+   "period": "Q2 2025",
+   "revenue": 47516,
+   "gross_profit": 37210,
+   "operating_income": 18374,
+   "net_income": 18337,
+   "gross_margin_pct": 78.31,
+   "operating_margin_pct": 38.67,
+   "profit_margin_pct": 38.59
+  },
+  {
+   "period": "Q3 2025",
+   "revenue": 51242,
+   "gross_profit": 39800,
+   "operating_income": 20715,
+   "net_income": 2709,
+   "gross_margin_pct": 77.67,
+   "operating_margin_pct": 40.43,
+   "profit_margin_pct": 5.29
+  },
+  {
+   "period": "Q4 2025",
+   "revenue": 59893,
+   "gross_profit": 47813,
+   "operating_income": 25272,
+   "net_income": 22768,
+   "gross_margin_pct": 79.83,
+   "operating_margin_pct": 42.2,
+   "profit_margin_pct": 38.01
+  },
+  {
+   "period": "Q1 2026",
+   "revenue": 56311,
+   "gross_profit": 45038,
+   "operating_income": 23561,
+   "net_income": 26773,
+   "gross_margin_pct": 79.98,
+   "operating_margin_pct": 41.84,
+   "profit_margin_pct": 47.54
+  },
+  {
+   "period": "Q2 2026",
+   "revenue": 60801,
+   "gross_profit": 49465,
+   "operating_income": 18782,
+   "net_income": 15848,
+   "gross_margin_pct": 81.36,
+   "operating_margin_pct": 30.89,
+   "profit_margin_pct": 26.07
+  }
+ ],
+ "annual_margins": [
+  {
+   "period": "2020",
+   "revenue": 85965,
+   "gross_profit": 69900,
+   "operating_income": 32671,
+   "net_income": 29146,
+   "gross_margin_pct": 81.31,
+   "operating_margin_pct": 38.01,
+   "profit_margin_pct": 33.9
+  },
+  {
+   "period": "2021",
+   "revenue": 117929,
+   "gross_profit": 97432,
+   "operating_income": 46753,
+   "net_income": 39370,
+   "gross_margin_pct": 82.62,
+   "operating_margin_pct": 39.65,
+   "profit_margin_pct": 33.38
+  },
+  {
+   "period": "2022",
+   "revenue": 116609,
+   "gross_profit": 92855,
+   "operating_income": 33555,
+   "net_income": 23200,
+   "gross_margin_pct": 79.63,
+   "operating_margin_pct": 28.78,
+   "profit_margin_pct": 19.9
+  },
+  {
+   "period": "2023",
+   "revenue": 134902,
+   "gross_profit": 108943,
+   "operating_income": 46751,
+   "net_income": 39098,
+   "gross_margin_pct": 80.76,
+   "operating_margin_pct": 34.66,
+   "profit_margin_pct": 28.98
+  },
+  {
+   "period": "2024",
+   "revenue": 164501,
+   "gross_profit": 134340,
+   "operating_income": 69380,
+   "net_income": 62360,
+   "gross_margin_pct": 81.67,
+   "operating_margin_pct": 42.18,
+   "profit_margin_pct": 37.91
+  },
+  {
+   "period": "2025",
+   "revenue": 200966,
+   "gross_profit": 164791,
+   "operating_income": 83276,
+   "net_income": 68098,
+   "gross_margin_pct": 82.0,
+   "operating_margin_pct": 41.44,
+   "profit_margin_pct": 33.89
+  }
+ ]
+}
