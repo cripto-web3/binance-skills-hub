@@ -112,11 +112,11 @@ async function collectOndoStatement() {
         const d = dyn.data ?? {};
         const si = d.stockInfo ?? {};
         const ti = d.tokenInfo ?? {};
+        // Note: chain/contractAddress are used only for the internal API call;
+        // they are NOT written to the output file (privacy).
         assets.push({
           ticker: r.ticker,
           symbol: r.symbol,
-          chain: r.chainId,
-          multiplier: r.multiplier,
           token_price: ti.price ?? null,
           stock_price_usd: si.price ?? null,
           reference_price: si.price && r.multiplier ? (+si.price / +r.multiplier).toFixed(2) : null,
@@ -131,7 +131,7 @@ async function collectOndoStatement() {
           volume24h_usd: ti.volume24h ?? null,
         });
       } catch (err) {
-        assets.push({ ticker: r.ticker, symbol: r.symbol, chain: r.chainId, error: err.message });
+        assets.push({ ticker: r.ticker, symbol: r.symbol, error: err.message });
       }
     }
     // overall Ondo market status
