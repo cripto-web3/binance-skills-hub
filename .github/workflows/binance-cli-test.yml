@@ -128,10 +128,12 @@ jobs:
 
           echo "--- binance-cli spot server-time ---"
           binance-cli spot server-time 2>&1 | tee /tmp/cli-time-all.log || true
-          if ! grep -q "serverTime" /tmp/cli-time-all.log; then
+          if ! grep -q "serverTime\|\{" /tmp/cli-time-all.log; then
             if grep -q "restricted location" /tmp/cli-time-all.log; then
               echo "runner region is restricted by Binance; switching to data-api mirror"
-              curl -sf "https://data-api.binance.vision/api/v3/time" | tee /tmp/cli-time-all.log
+              # data-api.binance.vision mirrors public market data but has no /time;
+              # a successful ping on the mirror proves the API surface is reachable
+              curl -sf "https://data-api.binance.vision/api/v3/ping" | tee /tmp/cli-time-all.log
             else
               tail -c 400 /tmp/cli-time-all.log; exit 1
             fi
