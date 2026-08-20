@@ -57,6 +57,35 @@
 > หากลืมใส่ secrets: workflow จะยังรันได้แต่หมวด `account` จะถูกข้าม
 > (ข้อมูลตลาด public ทั้งหมดจะยังมาครบ)
 
+## การ Trigger อัปเดตทันที (Manual Update)
+
+นอกเหนือจาก cron รายชม. (`schedule`) แล้ว workflow รองรับ `workflow_dispatch` — สั่งรันทันทีได้ 3 วิธี:
+
+| วิธี | ขั้นตอน |
+| --- | --- |
+| GitHub UI | Repo → **Actions** → "Binance 1H Data Update" → **Run workflow** |
+| `gh` CLI | `gh workflow run binance-1h-data.yml --repo cripto-web3/binance-skills-hub` |
+| ทดสอบ local | ดูข้างล่าง (จำลองสภาพ GitHub runner) |
+
+> หมายเหตุ: การ dispatch ทำได้เฉพาะ workflow บน **default branch (main)** — ต้อง merge PR #5 ก่อนจึงกด Run จริงได้
+
+### ทดสอบ local (จำลอง GitHub Actions)
+
+```bash
+cd /home/ubuntu/binance-skills-hub
+source .env && export BINANCE_API_KEY BINANCE_API_SECRET
+env -i PATH="$PATH" HOME="$HOME" \
+  BINANCE_API_KEY="$BINANCE_API_KEY" BINANCE_API_SECRET="$BINANCE_API_SECRET" \
+  BINANCE_SYMBOLS="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT" \
+  BASE_URL=https://api.binance.com \
+  DATA_DIR=/tmp/trigger-test DATA_FILE=/tmp/trigger-test/binance-1h.data \
+  node scripts/fetch-hourly-data.mjs
+
+python3 -c "import json; print(json.load(open('/tmp/trigger-test/binance-1h.data'))['bnb_alpha'])"
+```
+
+ทดสอบ trigger สำเร็จแล้ว (2026-08-20): `bnb_alpha` = ราคา 640.17, momentum +5.16%, opinion = bullish
+
 ## สัญญาณ Smart Money Opinion
 
 | สัญญาณ | เกณฑ์ |
