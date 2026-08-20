@@ -118,7 +118,7 @@ jobs:
           echo "Spot/futures CLI tests skipped per repo policy (no mirror); sandbox tests remain authoritative."
 
       - name: Test futures public endpoint (spot-only patch covers common lib; skip on geo-block)
-        if: steps.reachability.outputs.code == "200"
+        if: steps.reachability.outputs.code == '200'
         run: |
           set -euo pipefail
           # On geo-restricted runners the futures CLI prints no error text and
