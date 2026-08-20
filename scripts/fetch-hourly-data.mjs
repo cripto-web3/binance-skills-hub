@@ -25,7 +25,7 @@ import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE_URL = process.env.BASE_URL || 'https://api.binance.com';
-const MIRROR_URL = process.env.MIRROR_URL || 'https://data-api.binance.vision';
+const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'https://data-api.binance.vision';
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-1h.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
@@ -50,6 +50,7 @@ function signedJson(path, query = {}) {
 }
 
 async function withMirror(primary, mirror) {
+  if (!MIRROR_URL) return primary();
   try {
     return await primary();
   } catch (err) {
