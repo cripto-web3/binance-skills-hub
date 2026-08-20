@@ -55,7 +55,21 @@ jobs:
           BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
           BINANCE_ID: ${{ secrets.BINANCE_ID }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # Geo-restricted runners (e.g. US cloud) are blocked by api.binance.com with
+          # HTTP 451. Per repo policy we never fall back to a mirror, so skip this run
+          # cleanly instead of failing; the daily schedule will retry automatically.
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://api.binance.com/api/v3/ping")
+          echo "api.binance.com ping -> HTTP $code"
+          if [ "$code" = "451" ]; then
+            echo "skip: runner geo-blocked (HTTP 451) by api.binance.com — no mirror per policy; retrying tomorrow"
+            exit 0
+          fi
+          if [ "$code" != "200" ]; then
+            echo "error: base unreachable (HTTP $code)"
+            exit 1
+          fi
+          set -e
           node scripts/fetch-daily-data.mjs
           echo "---- data file preview ----"
           head -c 600 data/binance-daily.data || true

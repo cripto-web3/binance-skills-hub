@@ -19,13 +19,12 @@
  *   BINANCE_API_KEY    : signed endpoints (account snapshot)
  *   BINANCE_API_SECRET : signed endpoints (account snapshot)
  *
- * Works on geo-restricted runners via data-api.binance.vision mirror fallback.
+ * Reads exclusively from api.binance.com (per repo policy: no mirror).
  */
 import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE_URL = process.env.BASE_URL || 'https://api.binance.com';
-const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'https://data-api.binance.vision';
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-1h.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
@@ -49,47 +48,26 @@ function signedJson(path, query = {}) {
   return fetchJson(`${BASE_URL}${path}?${params}`);
 }
 
-async function withMirror(primary, mirror) {
-  if (!MIRROR_URL) return primary();
-  try {
-    return await primary();
-  } catch (err) {
-    if (/restricted|418|geo/i.test(String(err))) return mirror();
-    throw err;
-  }
-}
-
 /* ---------- category collectors (all read-only) ---------- */
 async function collectSpot() {
   const pick = t => ({ last_price: +t.lastPrice, change_pct: +t.priceChangePercent, high: +t.highPrice, low: +t.lowPrice, volume: +t.quoteVolume });
-  return withMirror(
-    async () => {
-      const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
-      return Object.fromEntries(SYMBOLS.map(sym => [sym, pick(all.find(x => x.symbol === sym) || {})]));
-    },
-    async () => {
-      const all = await fetchJson(`${MIRROR_URL}/api/v3/ticker/24hr`);
-      return Object.fromEntries(SYMBOLS.map(sym => [sym, pick(all.find(x => x.symbol === sym) || {})]));
-    },
-  );
+  const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
+  return Object.fromEntries(SYMBOLS.map(sym => [sym, pick(all.find(x => x.symbol === sym) || {})]));
 }
 
 async function collectMarket() {
-  const build = async url => {
-    const depth = await fetchJson(`${url}/api/v3/ticker/24hr`, {});
-    const usdt = depth.filter(x => x.symbol.endsWith('USDT'));
-    const up = usdt.filter(x => +x.priceChangePercent > 0).length;
-    const all = [...depth].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent);
-    return {
-      total_symbols: depth.length,
-      usdt_pairs: usdt.length,
-      up_pairs: up,
-      down_pairs: usdt.length - up,
-      top_gainers: all.slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
-      top_losers: all.slice(-10).reverse().map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
-    };
+  const depth = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
+  const usdt = depth.filter(x => x.symbol.endsWith('USDT'));
+  const up = usdt.filter(x => +x.priceChangePercent > 0).length;
+  const all = [...depth].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent);
+  return {
+    total_symbols: depth.length,
+    usdt_pairs: usdt.length,
+    up_pairs: up,
+    down_pairs: usdt.length - up,
+    top_gainers: all.slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
+    top_losers: all.slice(-10).reverse().map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
   };
-  return withMirror(() => build(BASE_URL), () => build(MIRROR_URL));
 }
 
 async function collectFunding() {
