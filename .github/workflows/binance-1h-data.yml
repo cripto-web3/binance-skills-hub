@@ -5,7 +5,7 @@ name: Binance 1H Data Update
 # All endpoints are READ-ONLY: never places orders or withdraws funds.
 on:
   schedule:
-    - cron: '5 * * * *'
+    - cron: "5 * * * *"
   workflow_dispatch:
 
 concurrency:
