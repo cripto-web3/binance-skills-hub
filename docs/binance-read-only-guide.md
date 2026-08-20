@@ -47,9 +47,54 @@
 
 สคริปต์ทดสอบสำเร็จแล้วใน sandbox: `scripts/test-key-read-only.py` — ตรวจ uid=115213344 ตรงกับบัญชี และอ่านยอดคงเหลือได้จริง
 
+### 2.3 การลงนาม HMAC-SHA256 (กลไกของ Private Endpoints)
+
+ทุก private request ลงนามด้วย HMAC-SHA256 ตามขั้นตอน:
+
+```
+1. timestamp = เวลาปัจจุบัน (ms) — ต้องไม่ต่างจาก server-time เกิน ±5000ms
+2. queryString = timestamp=<ms>[&param อื่นๆ]
+3. signature = HMAC-SHA256(queryString, SECRET) → hex
+4. ส่ง signature=... ใน URL + header X-MBX-APIKEY: <KEY>
+```
+
+ตัวอย่าง d้วย openssl:
+
+```bash
+TS=$(date +%s%3N)
+SIG=$(printf 'timestamp=%s' "$TS" | openssl dgst -sha256 -hmac "$SECRET" | awk '{print $NF}')
+curl "https://api.binance.com/api/v3/account?timestamp=$TS&signature=$SIG" -H "X-MBX-APIKEY: $KEY"
+```
+
 ---
 
-## 3. ข้อจำกัด (Rate Limits)
+## 3. ระบบอัปเดตอัตโนมัติทุก 1 ชม. (1H .data)
+
+Repo นี้มี GitHub Actions workflow `.github/workflows/binance-1h-data.yml` ที่รันทุกชั่วโมง (นาทีที่ 5) ดึงข้อมูลแบบ Read-Only ทั้งหมดด้วย API Key/Secret ที่เก็บเป็น **GitHub Secrets** (ไม่เคย commit) แล้วลงท้ายผลลง `data/binance-1h.data` ใน main branch อัตโนมัติ
+
+ข้อมูลในแต่ละรอบครอบคลุม: ราคา spot โทเคนที่ติดตาม, สรุปตลาดรวม (จำนวนคู่เทรด/เกินขึ้น-ลง), funding futures, margin assets ที่กู้ยืมได้, โทเคนหุ้น (tokenized stocks), **BNB Alpha** (โมเมนตัม 24 ชม. + จำนวน BNB pairs), Smart Money opinion (bullish/neutral/bearish) และ snapshot บัญชี (uid, permissions, ยอดคงเหลือที่ไม่เป็นศูนย์) ด้วยลายเซ็น HMAC
+
+ตั้งค่าที่: Settings → Secrets and variables → Actions → New repository secret สองตัว: `BINANCE_API_KEY` และ `BINANCE_API_SECRET`
+
+ดูคู่มือฉบับเต็มที่ `docs/binance-1h-data-guide.md`
+
+---
+
+## 4. การคำนวณค่าเชิงคณิตศาสตร์ (Math)
+
+ระบบคำนวณค่าเพิ่มเติมจากข้อมูลดิบที่ได้รับ (read-only เท่านั้น):
+
+| ค่า | สูตร/วิธีคำนวณ | 
+| --- | --- |
+| % เปลี่ยนแปลง 24 ชม. | (lastPrice − openPrice) / openPrice × 100 | 
+| BNB Alpha momentum | เปรียบเทียบ BNB เท่ากับ high/low 24 ชม. และค่าเฉลี่ย OHLC | 
+| ราคา BNB เทียบค่าเฉลี่ย | (price − mean(high,low)) / mean × 100 | 
+| Market breadth | สัดส่วนคู่ USDT ที่ขึ้น / รวมทั้งหมด | 
+| Smart Money score | คะแนน +/− จาก momentum, funding (long/short แน่นเกิน), breadth | 
+
+---
+
+## 6. ข้อจำกัด (Rate Limits)
 
 Binance บังคับข้อจำกัดตามน้ำหนัก (weight) ต่อช่วงเวลา:
 
@@ -64,7 +109,7 @@ Binance บังคับข้อจำกัดตามน้ำหนัก
 
 ---
 
-## 4. สิ่งที่ทำ**ไม่ได้** ด้วย Read-Only
+## 7. สิ่งที่ทำ**ไม่ได้** ด้วย Read-Only
 
 | สิ่งที่ทำไม่ได้ | หมายเหตุ |
 | --- | --- |
@@ -75,7 +120,7 @@ Binance บังคับข้อจำกัดตามน้ำหนัก
 
 ---
 
-## 5. วิธีเริ่มใช้งานใน sandbox นี้
+## 8. วิธีเริ่มใช้งานใน sandbox นี้
 
 ```bash
 cd /home/ubuntu/binance-skills-hub
@@ -95,7 +140,7 @@ python3 scripts/test-key-read-only.py
 
 ---
 
-## 6. ข้อควรระวังเพิ่มเติม
+## 9. ข้อควรระวังเพิ่มเติม
 
 1. **Revocation**: ถ้าคีเคยถูกเผยแพร่ ให้ลบทันทีที่ Binance → API Management แล้วสร้างคู่ใหม่
 2. **IP Allowlist**: เพิ่ม IP ของเครื่องที่ใช้จริง (เช่น sandbox IP ของ Manus) เพื่อปิดกั้นการใช้จากที่อื่น
