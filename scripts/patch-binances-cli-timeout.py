@@ -35,10 +35,21 @@ def global_node_modules_dir() -> str:
 def main() -> int:
     global_root = sys.argv[1] if len(sys.argv) > 1 else global_node_modules_dir()
     base = os.path.join(global_root, "@binance/binance-cli")
+    # Include all @binance/common copies: npm dedupes some connectors (usds-futures,
+    # coin-futures, fiat, vip-loan, sub-account) to their own nested copy of
+    # @binance/common, which also carries the 1000 ms default timeout.
     targets = [
         os.path.join(base, "node_modules/@binance/common/dist/index.mjs"),
         os.path.join(base, "node_modules/@binance/common/dist/index.js"),
     ]
+    for glob_dir in (
+        f"{base}/node_modules/@binance/*/node_modules/@binance/common/dist",
+    ):
+        import glob as _glob
+
+        for dist_dir in _glob.glob(glob_dir):
+            for name in ("index.mjs", "index.js"):
+                targets.append(os.path.join(dist_dir, name))
     patched_any = False
     for path in targets:
         if not os.path.exists(path):
