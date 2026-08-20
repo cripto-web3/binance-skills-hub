@@ -68,7 +68,7 @@ jobs:
           BASE_URL: https://api.binance.com
           PUBLIC_MIRROR_URL: ${{ steps.reachability.outputs.base == 'data-api.binance.vision' && 'https://data-api.binance.vision' || '' }}
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
-          BINANCE_API_SECRET: ${{ secrets.BINANCE_API_SECRET }}
+          BINANCE_API_SECRET: ${{ secrets.BINANCE_SECRET_KEY }}
           BINANCE_SYMBOLS: BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT
         run: |
           set -euo pipefail
