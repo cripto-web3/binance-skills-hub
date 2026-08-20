@@ -1,0 +1,69 @@
+name: Bun Runtime Data Fetch Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  bun-data-test:
+    name: Bun runtime data fetch (geo-block returns HTTP 451; skip instead of fail)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Report Bun version
+        run: bun --version
+
+      - name: Verify api.binance.com reachability, api only policy (no mirror)
+        id: reachability
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://api.binance.com/api/v3/ping")
+          echo "api.binance.com ping -> HTTP $code"
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch hourly data via Bun (skips when runner is geo-blocked)
+        if: steps.reachability.outputs.code == '200'
+        env:
+          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+          BINANCE_API_SECRET: ${{ secrets.BINANCE_SECRET_KEY }}
+          BINANCE_ID: ${{ secrets.BINANCE_ID }}
+          BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
+        run: |
+          set -euo pipefail
+          bun run scripts/fetch-hourly-data.mjs
+          echo "--- hourly output preview ---"
+          head -c 600 data/binance-1h.data
+          echo
+          echo "--- sensitive-data check (must be 0) ---"
+          grep -c -E "contractAddress|chainId" data/binance-1h.data || true
+
+      - name: Fetch daily data via Bun (skips when runner is geo-blocked)
+        if: steps.reachability.outputs.code == '200'
+        env:
+          BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
+          BINANCE_API_SECRET: ${{ secrets.BINANCE_SECRET_KEY }}
+          BINANCE_ID: ${{ secrets.BINANCE_ID }}
+          BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
+        run: |
+          set -euo pipefail
+          bun run scripts/fetch-daily-data.mjs
+          echo "--- daily output preview ---"
+          head -c 600 data/binance-daily.data
+          echo
+          echo "--- sensitive-data check (must be 0) ---"
+          grep -c -E "contractAddress|chainId" data/binance-daily.data || true
+
+      - name: Geo-blocked runner notice
+        if: steps.reachability.outputs.code != '200'
+        run: |
+          echo "GitHub runner is geo-blocked by api.binance.com (HTTP ${{ steps.reachability.outputs.code }})."
+          echo "Per repo policy (no mirror) data fetch tests are skipped; sandbox tests remain authoritative."
