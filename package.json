@@ -5,6 +5,7 @@
   "scripts": {
     "bnb:status:test": "bun scripts/test-bnb-hub-status.mjs",
     "guard:data:test": "node scripts/test-guard-local-only-data.mjs",
-    "qrcode:test": "bun scripts/test-qrcode-schema.mjs"
+    "qrcode:test": "bun scripts/test-qrcode-schema.mjs",
+    "binance-cli-openclaw:test": "node scripts/test-binance-cli-openclaw.mjs"
   }
 }
