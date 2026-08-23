@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 
-import { buildBinanceCliArgs } from "../skills/binance/binance-cli-openclaw/scripts/cli.mjs";
+import {
+  buildBinanceCliArgs,
+  buildBinanceCliInvocation,
+} from "../skills/binance/binance-cli-openclaw/scripts/cli.mjs";
 
 assert.deepEqual(buildBinanceCliArgs("account-info", {}), ["spot", "get-account"]);
 assert.deepEqual(buildBinanceCliArgs("ticker-price", { symbol: "BTCUSDT" }), [
@@ -55,5 +58,20 @@ assert.throws(
   /quantity.*quoteOrderQty/,
 );
 assert.throws(() => buildBinanceCliArgs("ticker-price", {}), /symbol/);
+
+const baseEnv = { PATH: "/usr/bin", BINANCE_ID: "existing" };
+const invocationWithId = buildBinanceCliInvocation("account-info", { binanceId: "115213344" }, baseEnv);
+assert.deepEqual(invocationWithId.args, ["spot", "get-account"]);
+assert.equal(invocationWithId.env.BINANCE_ID, "115213344");
+assert.equal(baseEnv.BINANCE_ID, "existing");
+assert.equal(invocationWithId.hasBinanceIdOverride, true);
+
+const invocationWithAliasId = buildBinanceCliInvocation("ticker-price", { symbol: "BTCUSDT", accountId: "7788" }, baseEnv);
+assert.equal(invocationWithAliasId.env.BINANCE_ID, "7788");
+
+assert.throws(
+  () => buildBinanceCliInvocation("account-info", { userId: "   " }, baseEnv),
+  /cannot be empty/,
+);
 
 console.log("binance-cli-openclaw:test passed");

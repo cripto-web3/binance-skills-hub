@@ -34,6 +34,16 @@ function pushFlag(args, flag, value) {
   args.push(flag, String(value));
 }
 
+function resolveBinanceId(params = {}) {
+  const raw = params.binanceId ?? params.accountId ?? params.userId;
+  if (raw === undefined || raw === null) return undefined;
+  const value = String(raw).trim();
+  if (!value) {
+    throw new Error("'binanceId' (or alias 'accountId'/'userId') cannot be empty when provided");
+  }
+  return value;
+}
+
 export function buildBinanceCliArgs(command, params = {}) {
   const args = [];
   switch (command) {
@@ -91,6 +101,16 @@ export function buildBinanceCliArgs(command, params = {}) {
   return args;
 }
 
+export function buildBinanceCliInvocation(command, params = {}, baseEnv = process.env) {
+  const args = buildBinanceCliArgs(command, params);
+  const env = { ...baseEnv };
+  const binanceId = resolveBinanceId(params);
+  if (binanceId) {
+    env.BINANCE_ID = binanceId;
+  }
+  return { args, env, hasBinanceIdOverride: Boolean(binanceId) };
+}
+
 function main(argv) {
   const command = argv[2];
   const paramsInput = argv[3];
@@ -101,14 +121,15 @@ function main(argv) {
   }
 
   const params = parseParams(paramsInput);
-  const args = buildBinanceCliArgs(command, params);
+  const { args, env, hasBinanceIdOverride } = buildBinanceCliInvocation(command, params);
 
   if (dryRun) {
-    console.log(`binance-cli ${args.join(" ")}`);
+    const prefix = hasBinanceIdOverride ? "BINANCE_ID=<provided> " : "";
+    console.log(`${prefix}binance-cli ${args.join(" ")}`);
     return;
   }
 
-  const result = spawnSync("binance-cli", args, { stdio: "inherit" });
+  const result = spawnSync("binance-cli", args, { stdio: "inherit", env });
   if (result.error) {
     throw result.error;
   }
