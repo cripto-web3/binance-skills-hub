@@ -46,6 +46,11 @@ node <skill-dir>/scripts/cli.mjs <command> '<json_params>'
 | `order-place` | Place a Spot order | `symbol`, `side`, `type`, and quantity-style field |
 | `order-status` | Get order status | `symbol` + `orderId` or `origClientOrderId` |
 
+Optional params for all commands:
+- `profile`: pass-through to `binance-cli --profile`.
+- `recvWindow`: pass-through to `binance-cli --recv-window`.
+- `binanceId` (aliases: `accountId`, `userId`): sets `BINANCE_ID` for that single command invocation.
+
 ## Example usage
 
 ```bash
@@ -53,6 +58,7 @@ node <skill-dir>/scripts/cli.mjs account-info '{}'
 node <skill-dir>/scripts/cli.mjs ticker-price '{"symbol":"BTCUSDT"}'
 node <skill-dir>/scripts/cli.mjs order-place '{"symbol":"BTCUSDT","side":"BUY","type":"MARKET","quoteOrderQty":"25"}'
 node <skill-dir>/scripts/cli.mjs order-status '{"symbol":"BTCUSDT","orderId":"123456"}'
+node <skill-dir>/scripts/cli.mjs account-info '{"binanceId":"115213344"}'
 ```
 
 ## Safety notes

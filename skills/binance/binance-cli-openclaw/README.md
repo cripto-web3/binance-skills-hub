@@ -28,6 +28,8 @@ node scripts/cli.mjs account-info '{}'
 node scripts/cli.mjs ticker-price '{"symbol":"BTCUSDT"}'
 node scripts/cli.mjs order-place '{"symbol":"BTCUSDT","side":"BUY","type":"MARKET","quoteOrderQty":"25"}'
 node scripts/cli.mjs order-status '{"symbol":"BTCUSDT","orderId":"123456"}'
+# Optional account reference override for this command invocation only:
+node scripts/cli.mjs account-info '{"binanceId":"115213344"}'
 ```
 
 Use `profile` in params to target a non-active profile, for example:
@@ -35,6 +37,9 @@ Use `profile` in params to target a non-active profile, for example:
 ```bash
 node scripts/cli.mjs ticker-price '{"symbol":"BNBUSDT","profile":"prod-main"}'
 ```
+
+Use `binanceId` (or alias `accountId` / `userId`) in params to override `BINANCE_ID`
+for a single invocation without hardcoding account identifiers in source code.
 
 ## Dry run
 
