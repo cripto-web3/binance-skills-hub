@@ -9,7 +9,7 @@
  * Categories:
  *   - statement_header : date as of end of day (UTC), report kind, read-only flag
  *   - binance_identity : uid (Binance ID), permissions, HMAC-signed time sync
- *                        (signature verifies BINANCE_API_KEY/BINANCE_API_SECRET pair)
+ *                        (signature verifies BINANCE_API_KEY/BINANCE_SECRET_KEY pair)
  *   - balances         : full signed balance snapshot (free/locked, non-zero) —
  *                        the daily "Total Assets / Total Liabilities" equivalent
  *   - ondo_statement   : Ondo tokenized-stock market status + fundamentals
@@ -19,7 +19,7 @@
  *
  * Secrets (GitHub Actions repository secrets):
  *   BINANCE_API_KEY    : signed endpoints
- *   BINANCE_API_SECRET : signed endpoints
+ *   BINANCE_SECRET_KEY : signed endpoints
  *
  * Optional env: BINANCE_STOCKS (watched Ondo stock tickers, default: GOOGL,AAPL,TSLA)
  */
@@ -31,7 +31,7 @@ const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'h
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-daily.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
-const SECRET = process.env.BINANCE_API_SECRET || '';
+const SECRET = process.env.BINANCE_SECRET_KEY || '';
 const STOCKS = (process.env.BINANCE_STOCKS || 'GOOGL,AAPL,TSLA').split(',');
 
 // Sensitive stock identifiers (chainId/contractAddress/multiplier) are NEVER
@@ -89,7 +89,7 @@ async function withMirror(primary, mirror) {
 
 /* ---------- collectors ---------- */
 async function collectIdentity() {
-  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_API_SECRET not set' };
+  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_SECRET_KEY not set' };
   try {
     const time = await fetchServerTime();
     const acct = await signedJson('/api/v3/account');

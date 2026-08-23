@@ -12,7 +12,7 @@ import urllib.parse
 from urllib.request import Request, urlopen
 
 KEY = os.environ.get("BINANCE_API_KEY", "")
-SECRET = os.environ.get("BINANCE_API_SECRET", "")
+SECRET = os.environ.get("BINANCE_SECRET_KEY", "")
 BASE = "https://api.binance.com"
 
 

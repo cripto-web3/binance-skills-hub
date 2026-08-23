@@ -11,7 +11,7 @@
 | สคริปต์หลัก | `scripts/fetch-daily-data.mjs` | ดึงข้อมูล read-only ทุกหมวดและเขียนเป็น JSON |
 | Workflow | `.github/workflows/binance-daily-data.yml` | รันทุกวัน 00:05 UTC + manual trigger |
 | ผลลัพธ์ | `data/binance-daily.data` | ไฟล์ JSON รายงานรายวัน (ยกเว้นจาก gitignore) |
-| Secrets | GitHub repository secrets | `BINANCE_API_KEY`, `BINANCE_API_SECRET` |
+| Secrets | GitHub repository secrets | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY` |
 
 ## โครงสร้างรายงานรายวัน
 
@@ -53,7 +53,7 @@ summary                 : สรุปรายงาน: read_only=true, hmac_v
 
 ```bash
 cd /home/ubuntu/binance-skills-hub
-source .env && export BINANCE_API_KEY BINANCE_API_SECRET
+source .env && export BINANCE_API_KEY BINANCE_SECRET_KEY
 BINANCE_STOCKS=GOOGL,AAPL,TSLA DATA_DIR=/tmp/daily-test \
   DATA_FILE=/tmp/daily-test/binance-daily.data node scripts/fetch-daily-data.mjs
 ```
