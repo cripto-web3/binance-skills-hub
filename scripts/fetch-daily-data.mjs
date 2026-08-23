@@ -27,6 +27,7 @@ import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE_URL = process.env.BASE_URL || 'https://api.binance.com';
+const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'https://data-api.binance.vision';
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-daily.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
@@ -206,16 +207,26 @@ async function collectStockInventory() {
 }
 
 async function collectMarket24h() {
-  const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
-  const up = all.filter(x => +x.priceChangePercent > 0).length;
-  return {
-    total_symbols: all.length,
-    usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
-    up_pairs: up,
-    down_pairs: all.length - up,
-    top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
-    date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
+  const build = async url => {
+    const all = await fetchJson(`${url}/api/v3/ticker/24hr`);
+    const up = all.filter(x => +x.priceChangePercent > 0).length;
+    return {
+      total_symbols: all.length,
+      usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
+      up_pairs: up,
+      down_pairs: all.length - up,
+      top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
+      date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
+    };
   };
+  try {
+    return await build(BASE_URL);
+  } catch (err) {
+    if (/restricted|403|418|451|geo/i.test(String(err))) {
+      try { return await build(MIRROR_URL); } catch (mirrorErr) { return { error: mirrorErr.message }; }
+    }
+    return { error: err.message };
+  }
 }
 
 function computeSummary({ identity, balances, ondo }) {

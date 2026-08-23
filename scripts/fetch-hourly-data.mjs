@@ -54,7 +54,7 @@ async function withMirror(primary, mirror) {
   try {
     return await primary();
   } catch (err) {
-    if (/restricted|418|geo/i.test(String(err))) return mirror();
+    if (/restricted|403|418|451|geo/i.test(String(err))) return mirror();
     throw err;
   }
 }
