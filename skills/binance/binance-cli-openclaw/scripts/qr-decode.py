@@ -69,12 +69,15 @@ def fetch_image_bytes(url):
 def classify_value(value):
     labels = []
     lowered = value.lower()
+    parsed = urllib.parse.urlparse(value)
+    hostname = (parsed.hostname or "").lower()
+    is_binance_host = hostname == "binance.com" or hostname.endswith(".binance.com")
+    is_binance_pay_path = parsed.path.startswith("/pay") or parsed.path.startswith("/qr")
 
     if (
         lowered.startswith("binance://")
         or "binancepay" in lowered
-        or "app.binance.com" in lowered
-        or "binance.com" in lowered and ("/pay" in lowered or "/qr" in lowered)
+        or (is_binance_host and is_binance_pay_path)
     ):
         labels.append("binance_pay_qr")
 
