@@ -17,7 +17,7 @@
  *
  * Secrets (GitHub Actions repository secrets):
  *   BINANCE_API_KEY    : signed endpoints (account snapshot)
- *   BINANCE_API_SECRET : signed endpoints (account snapshot)
+ *   BINANCE_SECRET_KEY : signed endpoints (account snapshot)
  *
  * Works on geo-restricted runners via data-api.binance.vision mirror fallback.
  */
@@ -29,7 +29,7 @@ const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'h
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-1h.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
-const SECRET = process.env.BINANCE_API_SECRET || '';
+const SECRET = process.env.BINANCE_SECRET_KEY || '';
 const SYMBOLS = (process.env.BINANCE_SYMBOLS || 'BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT').split(',');
 
 mkdirSync(DATA_DIR, { recursive: true });
@@ -54,7 +54,7 @@ async function withMirror(primary, mirror) {
   try {
     return await primary();
   } catch (err) {
-    if (/restricted|418|geo/i.test(String(err))) return mirror();
+    if (/restricted|418|451|geo/i.test(String(err))) return mirror();
     throw err;
   }
 }
@@ -160,7 +160,7 @@ async function collectBnbAlpha(market) {
 }
 
 async function collectAccount() {
-  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_API_SECRET not set; account snapshot skipped' };
+  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_SECRET_KEY not set; account snapshot skipped' };
   try {
     const acct = await signedJson('/api/v3/account');
     const nonZero = acct.balances.filter(b => +b.free !== 0 || +b.locked !== 0).map(b => ({ asset: b.asset, free: b.free, locked: b.locked }));

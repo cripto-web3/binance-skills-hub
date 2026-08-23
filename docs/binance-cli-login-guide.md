@@ -14,7 +14,7 @@ binance-cli profile create \
   --name read-only-main \
   --env prod \
   --api-key "$BINANCE_API_KEY" \
-  --api-secret "$BINANCE_API_SECRET" \
+  --api-secret "$BINANCE_SECRET_KEY" \
   --select --force
 ```
 
@@ -71,14 +71,14 @@ binance-cli spot ticker --symbol BNBUSDT
 ```bash
 cd /home/ubuntu/binance-skills-hub
 source .env
-export BINANCE_API_KEY BINANCE_API_SECRET
+export BINANCE_API_KEY BINANCE_SECRET_KEY
 
 # login
 binance-cli profile create --name read-only-main --env prod \
-  --api-key "$BINANCE_API_KEY" --api-secret "$BINANCE_API_SECRET" --select --force
+  --api-key "$BINANCE_API_KEY" --api-secret "$BINANCE_SECRET_KEY" --select --force
 
 # ใช้งาน
 binance-cli spot get-account
 ```
 
-หมายเหตุ: หากยังไม่ได้ login ผ่าน profile ให้ใช้ env vars โดยตรง (สคริปต์ `fetch-hourly-data.mjs` รองรับ `BINANCE_API_KEY` / `BINANCE_API_SECRET` อยู่แล้ว)
+หมายเหตุ: หากยังไม่ได้ login ผ่าน profile ให้ใช้ env vars โดยตรง (สคริปต์ `fetch-hourly-data.mjs` รองรับ `BINANCE_API_KEY` / `BINANCE_SECRET_KEY` อยู่แล้ว)

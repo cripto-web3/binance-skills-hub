@@ -46,11 +46,30 @@ jobs:
       - name: Verify CLI version
         run: binance-cli --version
 
+      - name: Verify API reachability (handles geo-restricted runners)
+        id: reachability
+        run: |
+          set +e
+          for domain in api.binance.com api1.binance.com data-api.binance.vision; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "https://$domain/api/v3/ping")
+            echo "$domain ping -> HTTP $code"
+            if [ "$code" = "200" ]; then
+              echo "base=$domain" >> "$GITHUB_OUTPUT"
+              echo "Reachable base URL: $domain"
+              break
+            fi
+          done
+          if ! grep -q "base=" "$GITHUB_OUTPUT"; then
+            echo "base=api.binance.com" >> "$GITHUB_OUTPUT"
+            echo "warn: no fully reachable base detected; the fetch script mirrors as needed"
+          fi
+
       - name: Fetch daily data (read-only)
         env:
           BASE_URL: https://api.binance.com
+          PUBLIC_MIRROR_URL: ${{ steps.reachability.outputs.base == 'data-api.binance.vision' && 'https://data-api.binance.vision' || '' }}
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
-          BINANCE_API_SECRET: ${{ secrets.BINANCE_SECRET_KEY }}
+          BINANCE_SECRET_KEY: ${{ secrets.BINANCE_SECRET_KEY }}
           BINANCE_STOCKS: GOOGL,AAPL,TSLA
           BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
           BINANCE_ID: ${{ secrets.BINANCE_ID }}

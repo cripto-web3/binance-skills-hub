@@ -9,7 +9,7 @@
  * Categories:
  *   - statement_header : date as of end of day (UTC), report kind, read-only flag
  *   - binance_identity : uid (Binance ID), permissions, HMAC-signed time sync
- *                        (signature verifies BINANCE_API_KEY/BINANCE_API_SECRET pair)
+ *                        (signature verifies BINANCE_API_KEY/BINANCE_SECRET_KEY pair)
  *   - balances         : full signed balance snapshot (free/locked, non-zero) —
  *                        the daily "Total Assets / Total Liabilities" equivalent
  *   - ondo_statement   : Ondo tokenized-stock market status + fundamentals
@@ -19,7 +19,7 @@
  *
  * Secrets (GitHub Actions repository secrets):
  *   BINANCE_API_KEY    : signed endpoints
- *   BINANCE_API_SECRET : signed endpoints
+ *   BINANCE_SECRET_KEY : signed endpoints
  *
  * Optional env: BINANCE_STOCKS (watched Ondo stock tickers, default: GOOGL,AAPL,TSLA)
  */
@@ -27,10 +27,11 @@ import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE_URL = process.env.BASE_URL || 'https://api.binance.com';
+const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'https://data-api.binance.vision';
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-daily.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
-const SECRET = process.env.BINANCE_API_SECRET || '';
+const SECRET = process.env.BINANCE_SECRET_KEY || '';
 const STOCKS = (process.env.BINANCE_STOCKS || 'GOOGL,AAPL,TSLA').split(',');
 
 // Sensitive stock identifiers (chainId/contractAddress/multiplier) are NEVER
@@ -74,9 +75,21 @@ async function fetchServerTime() {
   return fetchJson(`${BASE_URL}/api/v3/time`, { apikey: true });
 }
 
+// Public (unsigned) endpoints fall back to the data-api.binance.vision mirror
+// when the primary host is geo-restricted (HTTP 451/418) for the runner.
+async function withMirror(primary, mirror) {
+  if (!MIRROR_URL) return primary();
+  try {
+    return await primary();
+  } catch (err) {
+    if (/restricted|418|451|geo/i.test(String(err))) return mirror();
+    throw err;
+  }
+}
+
 /* ---------- collectors ---------- */
 async function collectIdentity() {
-  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_API_SECRET not set' };
+  if (!KEY || !SECRET) return { error: 'BINANCE_API_KEY/BINANCE_SECRET_KEY not set' };
   try {
     const time = await fetchServerTime();
     const acct = await signedJson('/api/v3/account');
@@ -206,16 +219,23 @@ async function collectStockInventory() {
 }
 
 async function collectMarket24h() {
-  const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
-  const up = all.filter(x => +x.priceChangePercent > 0).length;
-  return {
-    total_symbols: all.length,
-    usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
-    up_pairs: up,
-    down_pairs: all.length - up,
-    top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
-    date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
-  };
+  try {
+    const all = await withMirror(
+      () => fetchJson(`${BASE_URL}/api/v3/ticker/24hr`),
+      () => fetchJson(`${MIRROR_URL}/api/v3/ticker/24hr`),
+    );
+    const up = all.filter(x => +x.priceChangePercent > 0).length;
+    return {
+      total_symbols: all.length,
+      usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
+      up_pairs: up,
+      down_pairs: all.length - up,
+      top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
+      date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
 function computeSummary({ identity, balances, ondo }) {

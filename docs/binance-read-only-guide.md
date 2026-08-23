@@ -74,7 +74,7 @@ Repo นี้มี GitHub Actions workflow `.github/workflows/binance-1h-data.
 
 ข้อมูลในแต่ละรอบครอบคลุม: ราคา spot โทเคนที่ติดตาม, สรุปตลาดรวม (จำนวนคู่เทรด/เกินขึ้น-ลง), funding futures, margin assets ที่กู้ยืมได้, โทเคนหุ้น (tokenized stocks), **BNB Alpha** (โมเมนตัม 24 ชม. + จำนวน BNB pairs), Smart Money opinion (bullish/neutral/bearish) และ snapshot บัญชี (uid, permissions, ยอดคงเหลือที่ไม่เป็นศูนย์) ด้วยลายเซ็น HMAC
 
-ตั้งค่าที่: Settings → Secrets and variables → Actions → New repository secret สองตัว: `BINANCE_API_KEY` และ `BINANCE_API_SECRET`
+ตั้งค่าที่: Settings → Secrets and variables → Actions → New repository secret สองตัว: `BINANCE_API_KEY` และ `BINANCE_SECRET_KEY`
 
 ดูคู่มือฉบับเต็มที่ `docs/binance-1h-data-guide.md`
 
@@ -127,7 +127,7 @@ cd /home/ubuntu/binance-skills-hub
 
 # 1. โหลดคี่จาก .env (คีจริงอยู่ในไฟล์นี้เท่านั้น — gitignore บังคับไม่ให้ push)
 source .env
-export BINANCE_API_KEY BINANCE_API_SECRET
+export BINANCE_API_KEY BINANCE_SECRET_KEY
 
 # 2. ทดสอบแบบ public (ไม่ต้องใช้คี)
 binance-cli spot ticker --symbol BTCUSDT

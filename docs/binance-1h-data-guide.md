@@ -50,7 +50,7 @@
 | Secret Name | ค่า |
 |-------------|-----|
 | `BINANCE_API_KEY` | API Key ของคุณ (เช่น `1jA35qAXOaTCLGDhAXE06uT4...`) |
-| `BINANCE_API_SECRET` | Secret Key ของคุณ (เช่น `Wvt8eyEqsdBA8Fq9udef95kNqk...`) |
+| `BINANCE_SECRET_KEY` | Secret Key ของคุณ (เช่น `Wvt8eyEqsdBA8Fq9udef95kNqk...`) |
 
 3. ค่า API Key/Secret จะถูกใช้เฉพาะใน GitHub Actions runtime — **ไม่ถูก commit** ลง repo
 
@@ -73,9 +73,9 @@
 
 ```bash
 cd /home/ubuntu/binance-skills-hub
-source .env && export BINANCE_API_KEY BINANCE_API_SECRET
+source .env && export BINANCE_API_KEY BINANCE_SECRET_KEY
 env -i PATH="$PATH" HOME="$HOME" \
-  BINANCE_API_KEY="$BINANCE_API_KEY" BINANCE_API_SECRET="$BINANCE_API_SECRET" \
+  BINANCE_API_KEY="$BINANCE_API_KEY" BINANCE_SECRET_KEY="$BINANCE_SECRET_KEY" \
   BINANCE_SYMBOLS="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT" \
   BASE_URL=https://api.binance.com \
   DATA_DIR=/tmp/trigger-test DATA_FILE=/tmp/trigger-test/binance-1h.data \
