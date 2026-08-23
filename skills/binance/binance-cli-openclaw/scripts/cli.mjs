@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
 const USAGE = `Usage:
   node scripts/cli.mjs <command> '<json_params>' [--dry-run]
@@ -8,6 +9,7 @@ Commands:
   ticker-price
   order-place
   order-status
+  decode-qr
 `;
 
 function parseParams(input) {
@@ -32,6 +34,33 @@ function requireField(params, field, command) {
 function pushFlag(args, flag, value) {
   if (value === undefined || value === null || value === "") return;
   args.push(flag, String(value));
+}
+
+export function buildQrDecodeArgs(params = {}) {
+  const imagePath = params.imagePath ?? params.image ?? params.path;
+  const imageUrl = params.imageUrl ?? params.url;
+
+  if (!!imagePath === !!imageUrl) {
+    throw new Error("Provide exactly one of 'imagePath' (or image/path) or 'imageUrl' (or url) for decode-qr");
+  }
+
+  return imagePath ? ["--image", String(imagePath)] : ["--url", String(imageUrl)];
+}
+
+function runQrDecode(params = {}, dryRun = false) {
+  const scriptPath = fileURLToPath(new URL("./qr-decode.py", import.meta.url));
+  const args = [scriptPath, ...buildQrDecodeArgs(params)];
+
+  if (dryRun) {
+    console.log(`python3 ${args.join(" ")}`);
+    return;
+  }
+
+  const result = spawnSync("python3", args, { stdio: "inherit" });
+  if (result.error) throw result.error;
+  if (typeof result.status === "number" && result.status !== 0) {
+    process.exit(result.status);
+  }
 }
 
 export function buildBinanceCliArgs(command, params = {}) {
@@ -101,6 +130,11 @@ function main(argv) {
   }
 
   const params = parseParams(paramsInput);
+  if (command === "decode-qr") {
+    runQrDecode(params, dryRun);
+    return;
+  }
+
   const args = buildBinanceCliArgs(command, params);
 
   if (dryRun) {
