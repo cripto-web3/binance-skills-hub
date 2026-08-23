@@ -27,6 +27,7 @@ import { createHmac } from 'node:crypto';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const BASE_URL = process.env.BASE_URL || 'https://api.binance.com';
+const MIRROR_URL = process.env.PUBLIC_MIRROR_URL || process.env.MIRROR_URL || 'https://data-api.binance.vision';
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const OUT_FILE = process.env.DATA_FILE || `${DATA_DIR}/binance-daily.data`;
 const KEY = process.env.BINANCE_API_KEY || '';
@@ -72,6 +73,18 @@ function signedJson(path, query = {}) {
 // /api/v3/time is public and does NOT accept a signature query parameter.
 async function fetchServerTime() {
   return fetchJson(`${BASE_URL}/api/v3/time`, { apikey: true });
+}
+
+// Public (unsigned) endpoints fall back to the data-api.binance.vision mirror
+// when the primary host is geo-restricted (HTTP 451/418) for the runner.
+async function withMirror(primary, mirror) {
+  if (!MIRROR_URL) return primary();
+  try {
+    return await primary();
+  } catch (err) {
+    if (/restricted|418|451|geo/i.test(String(err))) return mirror();
+    throw err;
+  }
 }
 
 /* ---------- collectors ---------- */
@@ -206,16 +219,23 @@ async function collectStockInventory() {
 }
 
 async function collectMarket24h() {
-  const all = await fetchJson(`${BASE_URL}/api/v3/ticker/24hr`);
-  const up = all.filter(x => +x.priceChangePercent > 0).length;
-  return {
-    total_symbols: all.length,
-    usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
-    up_pairs: up,
-    down_pairs: all.length - up,
-    top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
-    date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
-  };
+  try {
+    const all = await withMirror(
+      () => fetchJson(`${BASE_URL}/api/v3/ticker/24hr`),
+      () => fetchJson(`${MIRROR_URL}/api/v3/ticker/24hr`),
+    );
+    const up = all.filter(x => +x.priceChangePercent > 0).length;
+    return {
+      total_symbols: all.length,
+      usdt_pairs: all.filter(x => x.symbol.endsWith('USDT')).length,
+      up_pairs: up,
+      down_pairs: all.length - up,
+      top_gainers: [...all].sort((a, b) => +b.priceChangePercent - +a.priceChangePercent).slice(0, 10).map(g => ({ symbol: g.symbol, pct: +g.priceChangePercent })),
+      date_as_of_end_of_day_utc: new Date().toISOString().slice(0, 10),
+    };
+  } catch (err) {
+    return { error: err.message };
+  }
 }
 
 function computeSummary({ identity, balances, ondo }) {
