@@ -1,0 +1,340 @@
+import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import test from 'node:test';
+
+import {
+  buildTransferParams,
+  generateHmacSignature,
+  runSendUsdt,
+  validateAmount,
+  validateEthereumAddress,
+  validateNetworkChainId,
+} from '../send_usdt.ts';
+
+test('validateEthereumAddress validates strict ethereum address format', () => {
+  assert.equal(validateEthereumAddress('0x1234567890abcdef1234567890abcdef12345678'), true);
+  assert.equal(validateEthereumAddress('0x1234'), false);
+  assert.equal(validateEthereumAddress('0xZZ34567890abcdef1234567890abcdef12345678'), false);
+});
+
+test('validateAmount enforces precision and min/max limits', () => {
+  assert.equal(validateAmount('1000000'), true);
+  assert.equal(validateAmount('0.01000000'), true);
+  assert.equal(validateAmount('0.00999999'), false);
+  assert.equal(validateAmount('2000000.00000000'), true);
+  assert.equal(validateAmount('2000000.00000001'), false);
+  assert.equal(validateAmount('1.123456789'), false);
+});
+
+test('validateNetworkChainId allows ETH mainnet only', () => {
+  assert.equal(validateNetworkChainId('ETH', '1'), true);
+  assert.equal(validateNetworkChainId('eth', '1'), true);
+  assert.equal(validateNetworkChainId('BSC', '56'), false);
+});
+
+test('generateHmacSignature creates expected SHA256 signature', () => {
+  const signature = generateHmacSignature('foo=bar&baz=qux', 'secret');
+  assert.equal(signature, '7dcb5c22610e784e0b117bb0a739090e8b517914635cb83f1502284ca10c299e');
+});
+
+test('buildTransferParams keeps Binance insertion order', () => {
+  const params = buildTransferParams({ amount: '1000000', timestamp: '123', recvWindow: '5000' });
+  assert.deepEqual(Object.keys(params), [
+    'fromSymbol',
+    'toSymbol',
+    'fromAccountType',
+    'toAccountType',
+    'amount',
+    'timestamp',
+    'recvWindow',
+  ]);
+});
+
+test('runSendUsdt dry-run validates credentials and never calls transfer endpoint', async () => {
+  const calls: Array<{ url: string; method: string | undefined }> = [];
+  const logs: string[] = [];
+
+  const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ url, method: init?.method });
+
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+
+    if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+      return new Response('{}', { status: 200 });
+    }
+
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000.00000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_BASE_URL: 'https://api.binance.com',
+    BINANCE_RECV_WINDOW: '5000',
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    now: () => 1700000000000,
+    fetchImpl,
+    logger: {
+      log: (line: string) => logs.push(line),
+      error: () => {},
+    },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+  assert.equal(calls.some((c) => c.url.includes('/sapi/v1/account/universal-transfer')), false);
+  assert.equal(logs.join('\n').includes('testsecret'), false);
+});
+
+test('runSendUsdt send mode requires confirmation and sends transfer when allowed', async () => {
+  const calls: Array<{ url: string; method: string | undefined }> = [];
+
+  const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+    const url = String(input);
+    calls.push({ url, method: init?.method });
+
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+
+    if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+      return new Response('{}', { status: 200 });
+    }
+
+    if (url.startsWith('https://api.binance.com/sapi/v1/account/universal-transfer?')) {
+      return new Response(JSON.stringify({ tranId: 987654321 }), { status: 200 });
+    }
+
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_BASE_URL: 'https://api.binance.com',
+    BINANCE_ALLOW_LIVE_TRANSFER: 'true',
+  };
+
+  const result = await runSendUsdt({
+    argv: ['--send'],
+    env,
+    now: () => 1700000000000,
+    fetchImpl,
+    confirmPrompt: async () => true,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'send');
+  assert.equal(result.transactionId, '987654321');
+  assert.equal(calls.filter((c) => c.url.includes('/sapi/v1/account/universal-transfer')).length, 1);
+  assert.equal(calls.find((c) => c.url.includes('/sapi/v1/account/universal-transfer'))?.method, 'POST');
+});
+
+test('runSendUsdt accepts requested sender/contract alias variable names', async () => {
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://192.168.1.1/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    return new Response('{}', { status: 200 });
+  };
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_ADDRESS_SENDER: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRAC_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_IP_APILIST: '192.168.1.1,10.0.0.1',
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    fetchImpl,
+    now: () => 1700000000000,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+});
+
+test('runSendUsdt loads .env.local before .env', async () => {
+  const cwd = process.cwd();
+  const dir = mkdtempSync(join(tmpdir(), 'send-usdt-env-'));
+  const logs: string[] = [];
+
+  try {
+    writeFileSync(join(dir, '.env.local'), [
+      'BINANCE_API_KEY=local_key',
+      'BINANCE_SECRET_KEY=local_secret',
+      'BINANCE_UID=123456',
+      'BINANCE_CREATOR_ADDRESS=0x1234567890abcdef1234567890abcdef12345678',
+      'BINANCE_CONTRACT_ADDRESS=0x1111111111111111111111111111111111111111',
+      'BINANCE_WALLET_RECEIVE=0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      'BINANCE_NETWORK=ETH',
+      'BINANCE_CHAIN_ID=1',
+    ].join('\n'));
+    writeFileSync(join(dir, '.env'), 'BINANCE_API_KEY=env_key\n');
+
+    process.chdir(dir);
+
+    const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url === 'https://api.binance.com/api/v3/time') {
+        return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+      }
+      if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+        assert.equal((init?.headers as Record<string, string>)['X-MBX-APIKEY'], 'local_key');
+        return new Response('{}', { status: 200 });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    };
+
+    const result = await runSendUsdt({
+      argv: [],
+      env: {},
+      fetchImpl,
+      now: () => 1700000000000,
+      logger: { log: (line: string) => logs.push(line), error: () => {} },
+    });
+
+    assert.equal(result.mode, 'dry-run');
+  } finally {
+    process.chdir(cwd);
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('runSendUsdt uses BINANCE_IP_APILIST as base URL fallback', async () => {
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_IP_APILIST: '1.2.3.4,5.6.7.8',
+  };
+
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://1.2.3.4/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    assert.ok(url.startsWith('https://1.2.3.4/api/v3/account?'));
+    return new Response('{}', { status: 200 });
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    fetchImpl,
+    now: () => 1700000000000,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+});
+
+test('runSendUsdt retries next BINANCE_IP_APILIST entry when first endpoint is unreachable', async () => {
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_IP_APILIST: '1.2.3.4,2.3.4.5',
+  };
+
+  const hitUrls: string[] = [];
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    hitUrls.push(url);
+    if (url.startsWith('https://1.2.3.4/')) {
+      throw new Error('connect timeout');
+    }
+    if (url === 'https://2.3.4.5/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    if (url.startsWith('https://2.3.4.5/api/v3/account?')) {
+      return new Response('{}', { status: 200 });
+    }
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    fetchImpl,
+    now: () => 1700000000000,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+  assert.equal(hitUrls.some((url) => url.startsWith('https://1.2.3.4/')), true);
+  assert.equal(hitUrls.some((url) => url === 'https://2.3.4.5/api/v3/time'), true);
+  assert.equal(hitUrls.some((url) => url.startsWith('https://2.3.4.5/api/v3/account?')), true);
+});
+
+test('runSendUsdt returns timestamp_error when Binance rejects timestamp', async () => {
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+  };
+
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+      return new Response(JSON.stringify({ code: -1021, msg: 'Timestamp for this request is outside of the recvWindow.' }), { status: 400 });
+    }
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  await assert.rejects(
+    runSendUsdt({ argv: [], env, fetchImpl, logger: { log: () => {}, error: () => {} } }),
+    /timestamp/i,
+  );
+});

@@ -76,6 +76,32 @@ To add a new skill:
 
 ---
 
+## Secure Binance USDT Internal Transfer Script
+
+This repository includes `src/scripts/send_usdt.ts` for a high-safety Binance internal transfer request flow.
+
+- Uses Binance signed endpoint `POST /sapi/v1/account/universal-transfer`
+- Uses HMAC-SHA256 request signing from environment secrets only
+- No private key, no seed phrase, and no blockchain transaction creation
+- Dry-run mode is default and prints a redacted preview only
+- Live mode requires both `--send` and `BINANCE_ALLOW_LIVE_TRANSFER=true`
+- Live mode requires interactive `CONFIRM` input before request submission
+
+Run:
+
+```bash
+node /home/runner/work/binance-skills-hub/binance-skills-hub/src/scripts/send_usdt.ts
+node /home/runner/work/binance-skills-hub/binance-skills-hub/src/scripts/send_usdt.ts --send
+```
+
+Security notes:
+
+- Never commit real `.env` values, API keys, or secret keys.
+- Never log full signed URLs/query strings/signatures.
+- For high-value transfers, test with a small amount first.
+
+---
+
 ## Disclaimer
 
 Binance Skills Hub is an informational tool only. Binance Skills Hub and its outputs are provided to you on an “as is” and “as available” basis, without representation or warranty of any kind. It does not constitute investment, financial, trading or any other form of advice; represent a recommendation to buy, sell or hold any assets; guarantee the accuracy, timeliness or completeness of the data or analysis presented. Your use of Binance Skills Hub and any information provided in connection with this feature is at your own risk, and you are solely responsible for evaluating the information provided and for all trading decisions made by you. Binance does not endorse or guarantee any AI-generated information. Any AI-generated information or summary should not be solely relied on for decision making. AI-generated content may include or reflect information, views and opinions of third parties, and may also include errors, biases or outdated information. Binance is not responsible for any losses or damages incurred as a result of your use of or reliance on the Binance Skills Hub feature. Binance may modify or discontinue the Binance Skills Hub feature at its discretion, and functionality may vary by region or user profile. Digital asset prices are subject to high market risk and price volatility. The value of your investment may go down or up, and you may not get back the amount invested. You are solely responsible for your investment decisions and Binance is not liable for any losses you may incur. Past performance is not a reliable predictor of future performance. You should only invest in products you are familiar with and where you understand the risks. You should carefully consider your investment experience, financial situation, investment objectives and risk tolerance and consult an independent financial adviser prior to making any investment. This material should not be construed as advice. For more information, please see our [Risk Warning](https://www.binance.com/en/risk-warning) and [Terms of Use](https://www.binance.com/en/terms).
