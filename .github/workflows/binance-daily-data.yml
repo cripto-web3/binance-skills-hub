@@ -70,22 +70,31 @@ jobs:
           PUBLIC_MIRROR_URL: ${{ steps.reachability.outputs.base == 'data-api.binance.vision' && 'https://data-api.binance.vision' || '' }}
           BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
           BINANCE_SECRET_KEY: ${{ secrets.BINANCE_SECRET_KEY }}
+          BINANCE_UID: ${{ secrets.BINANCE_UID }}
           BINANCE_STOCKS: GOOGL,AAPL,TSLA
           BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
-          BINANCE_ID: ${{ secrets.BINANCE_ID }}
         run: |
           set -euo pipefail
           node scripts/fetch-daily-data.mjs
-          echo "---- data file preview ----"
-          head -c 600 data/binance-daily.data || true
-          echo
+          python3 - <<'PYEOF'
+          import json
+          d = json.load(open('data/binance-daily.data'))
+          ident = d['binance_identity']
+          print('daily data summary:',
+                'hmac_verified=', ident.get('hmac_verified'),
+                'uid_check_status=', ident.get('uid_check_status'),
+                'non_zero_balances=', d['balances'].get('non_zero', 0))
+          PYEOF
           echo "---- sizes ----"
           ls -la data/
 
       - name: Validate output schema
+        env:
+          BINANCE_UID: ${{ secrets.BINANCE_UID }}
         run: |
           set -euo pipefail
           python3 - <<'PYEOF'
+          import os
           import json, sys
           d = json.load(open('data/binance-daily.data'))
           required = ['generated_at', 'kind', 'read_only', 'binance_identity',
@@ -94,13 +103,19 @@ jobs:
           assert not missing, f'missing top-level keys: {missing}'
           assert d['kind'] == 'binance-daily' and d['read_only'] is True
           ident = d['binance_identity']
-          assert ident.get('binance_id') == 115213344, 'unexpected Binance ID'
+          assert ident.get('binance_id') is not None, 'missing Binance identity UID'
           assert ident.get('hmac_verified') is True, 'HMAC verification failed'
+          expected_uid = os.environ.get('BINANCE_UID', '').strip()
+          if expected_uid:
+              assert ident.get('uid_matches_expected') is True, 'BINANCE_UID mismatch'
+              assert ident.get('uid_check_status') == 'matched', 'unexpected UID validation status'
+          else:
+              assert ident.get('uid_check_status') == 'not_configured', 'expected UID check should be skipped when BINANCE_UID is unset'
           ondo = d['ondo_statement']
           assert 'watched_stocks' in ondo, 'missing watched_stocks'
           errors = [s['error'] for s in ondo['watched_stocks'] if 'error' in s]
           assert not errors, f'ondo stock errors: {errors}'
-          print('schema OK | binance_id:', ident['binance_id'],
+          print('schema OK | uid_check_status:', ident.get('uid_check_status'),
                 '| hmac:', ident['hmac_verified'],
                 '| stocks:', len(ondo['watched_stocks']),
                 '| elapsed:', d['elapsed_ms'], 'ms')
