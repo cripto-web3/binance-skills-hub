@@ -183,7 +183,6 @@ test('runSendUsdt loads .env.local before .env', async () => {
       'BINANCE_CREATOR_ADDRESS=0x1234567890abcdef1234567890abcdef12345678',
       'BINANCE_CONTRACT_ADDRESS=0xdac17f958d2ee523a2206206994597c13d831ec7',
       'BINANCE_WALLET_RECEIVE=0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
-      'BINANCE_WITHDRAW_AMOUNT=1000000',
       'BINANCE_NETWORK=ETH',
       'BINANCE_CHAIN_ID=1',
     ].join('\n'));
