@@ -1,0 +1,147 @@
+# Binance Skills Hub Setup Guide / คู่มือตั้งค่า Binance Skills Hub
+
+This guide explains how to configure repository variables, secrets, and local
+environment files for Binance Skills Hub.
+
+คู่มือนี้อธิบายวิธีตั้งค่า repository variables, secrets และไฟล์ environment
+แบบ local สำหรับ Binance Skills Hub
+
+## 1. File map / ผังไฟล์
+
+| File | Purpose (EN) | จุดประสงค์ (TH) |
+| --- | --- | --- |
+| `/home/runner/work/binance-skills-hub/binance-skills-hub/.env.example` | Full local environment template | เทมเพลตตัวแปรแบบ local ที่ครบถ้วน |
+| `/home/runner/work/binance-skills-hub/binance-skills-hub/.env.agent` | Copilot Cloud Agent-oriented template | เทมเพลตสำหรับ Copilot Cloud Agent |
+| `/home/runner/work/binance-skills-hub/binance-skills-hub/SECRETS_REFERENCE.md` | Detailed variable and secret inventory | เอกสารอ้างอิงตัวแปรและ secrets แบบละเอียด |
+| `/home/runner/work/binance-skills-hub/binance-skills-hub/.github/workflows/AGENT_VARIABLES.yml` | Example GitHub Actions workflow | ตัวอย่าง workflow สำหรับ GitHub Actions |
+
+## 2. Local environment setup / การตั้งค่า environment แบบ local
+
+### Step 1: Create `.env` / สร้างไฟล์ `.env`
+
+```bash
+cd /home/runner/work/binance-skills-hub/binance-skills-hub
+cp .env.example .env
+chmod 600 .env
+```
+
+### Step 2: Fill only what you need / กรอกเฉพาะค่าที่ต้องใช้
+
+| Use case | Required values |
+| --- | --- |
+| Hourly market data / ข้อมูลรายชั่วโมง | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY`, `BINANCE_SYMBOLS` |
+| Daily Ondo-style report / รายงานรายวัน | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY`, `BINANCE_STOCKS`, `BINANCE_STOCK_MAP` |
+| Web3 / USDT tools / เครื่องมือ Web3 | `ETH_RPC_URL`, `PRIVATE_KEY`, `ETH_ADDRESS_SENDER`, `ADDRESS_RECEIPT` |
+| Payment skill / สกิล Payment | `PAYMENT_API_KEY`, `PAYMENT_API_SECRET` |
+| Square posting / โพสต์ Square | `BINANCE_SQUARE_OPENAPI_KEY` |
+
+### Step 3: Keep `.env` private / เก็บ `.env` เป็นความลับ
+
+- `.env` is already ignored by Git.
+- `.env` ถูก ignore อยู่แล้วใน Git
+- Keep real credentials only in `.env`, local config files, or GitHub Secrets.
+- ให้เก็บ credential จริงไว้ใน `.env`, local config หรือ GitHub Secrets เท่านั้น
+
+## 3. GitHub Secrets setup / การตั้งค่า GitHub Secrets
+
+Open:
+
+- Repository → **Settings** → **Secrets and variables** → **Actions**
+- ไปที่ Repository → **Settings** → **Secrets and variables** → **Actions**
+
+Create these **repository secrets**:
+
+| Secret | Why it is a secret (EN) | เหตุผลที่ควรเป็น secret (TH) |
+| --- | --- | --- |
+| `BINANCE_API_KEY` | Binance authenticated API access | ใช้ยืนยันตัวตนกับ Binance API |
+| `BINANCE_SECRET_KEY` | Signs Binance requests | ใช้ลงลายเซ็นคำขอ Binance |
+| `BINANCE_ID` | Account identifier for workflow parity/validation | ตัวระบุบัญชีสำหรับ workflow/validation |
+| `BINANCE_ALHFA_GOOGLON` | Private stock-map payload mapped to `BINANCE_STOCK_MAP` | payload map ส่วนตัวที่ map ไปยัง `BINANCE_STOCK_MAP` |
+| `BINANCE_SQUARE_OPENAPI_KEY` | Binance Square publishing access | ใช้เผยแพร่ไปยัง Binance Square |
+| `PAYMENT_API_KEY` | Payment API authentication | ใช้ยืนยันตัวตน Payment API |
+| `PAYMENT_API_SECRET` | Payment API signing | ใช้ลงลายเซ็น Payment API |
+| `ETH_RPC_URL` | May expose private provider/project endpoint | อาจเป็น endpoint ส่วนตัวของผู้ให้บริการ RPC |
+| `PRIVATE_KEY` | Wallet signing key | private key สำหรับลงนามธุรกรรม |
+| `ETHERSCAN_API_KEY` | Etherscan/verification access | ใช้สำหรับ verify กับ Etherscan |
+
+## 4. GitHub Variables setup / การตั้งค่า GitHub Variables
+
+Create these **repository variables** when you want reusable non-sensitive
+defaults:
+
+| Variable | Suggested default | Default ที่แนะนำ |
+| --- | --- | --- |
+| `BINANCE_BASE_URL` | `https://api.binance.com` | `https://api.binance.com` |
+| `BASE_URL` | `https://api.binance.com` | `https://api.binance.com` |
+| `MIRROR_URL` | `https://data-api.binance.vision` | `https://data-api.binance.vision` |
+| `PUBLIC_MIRROR_URL` | `https://data-api.binance.vision` | `https://data-api.binance.vision` |
+| `DATA_DIR` | `data` | `data` |
+| `DATA_FILE` | `data/binance-1h.data` or `data/binance-daily.data` | `data/binance-1h.data` หรือ `data/binance-daily.data` |
+| `BINANCE_SYMBOLS` | `BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT` | `BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT` |
+| `BINANCE_STOCKS` | `GOOGL,AAPL,TSLA` | `GOOGL,AAPL,TSLA` |
+| `ETH_TOKENCONTRACT_USDT` | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | `0xdAC17F958D2ee523a2206206994597C13D831ec7` |
+| `ETH_ADDRESS_SENDER` | sender wallet address | ที่อยู่กระเป๋าผู้ส่ง |
+| `ADDRESS_RECEIPT` | recipient wallet address | ที่อยู่กระเป๋าผู้รับ |
+| `PAYMENT_BASE_URL` | `https://bpay.binanceapi.com` | `https://bpay.binanceapi.com` |
+
+## 5. Copilot Cloud Agent configuration / การตั้งค่า Copilot Cloud Agent
+
+1. Use `.env.agent` as the committed template.
+2. Store real values in GitHub Secrets/Variables, not in `.env.agent`.
+3. Map GitHub Secrets/Variables into runtime env names inside workflows.
+4. Review `/home/runner/work/binance-skills-hub/binance-skills-hub/.github/workflows/AGENT_VARIABLES.yml`
+   for a safe example.
+
+1. ใช้ `.env.agent` เป็นเทมเพลตที่ commit ได้
+2. ใส่ค่าจริงใน GitHub Secrets/Variables ไม่ใช่ใน `.env.agent`
+3. map ค่าเหล่านั้นเป็น runtime env ภายใน workflow
+4. ดูตัวอย่างที่ `.github/workflows/AGENT_VARIABLES.yml`
+
+## 6. Example use cases / ตัวอย่างการใช้งาน
+
+### Read-only data collection / การดึงข้อมูลแบบอ่านอย่างเดียว
+
+```bash
+source .env
+node scripts/fetch-hourly-data.mjs
+```
+
+### Daily data generation / การสร้างข้อมูลรายวัน
+
+```bash
+source .env
+DATA_FILE=data/binance-daily.data node scripts/fetch-daily-data.mjs
+```
+
+### Square posting / การโพสต์ Square
+
+```bash
+BINANCE_SQUARE_OPENAPI_KEY=your_key node skills/binance/square-post/scripts/save-key.mjs
+```
+
+## 7. Security best practices / แนวปฏิบัติด้านความปลอดภัย
+
+- Never commit real secrets or wallet private keys.
+- ห้าม commit secret จริงหรือ private key จริง
+- Prefer repository secrets for anything that authenticates, signs, pays, or
+  identifies a private account.
+- ให้ใช้ repository secrets สำหรับค่าที่เกี่ยวกับการยืนยันตัวตน การลงนาม
+  การชำระเงิน หรือการระบุตัวบัญชีส่วนตัว
+- Treat wallet addresses and `BINANCE_ID` as sensitive operational metadata if
+  they identify real accounts you do not want to expose.
+- หาก wallet address หรือ `BINANCE_ID` ชี้ไปยังบัญชีจริงที่ไม่ต้องการเปิดเผย
+  ให้ถือว่าเป็นข้อมูลอ่อนไหวเชิงปฏิบัติการ
+- Do not print full secrets in workflow logs.
+- ห้ามพิมพ์ค่า secret แบบเต็มลงใน workflow logs
+- Do not reintroduce deprecated `BINANCE_API_SECRET`.
+- ห้ามนำ `BINANCE_API_SECRET` ที่เลิกใช้แล้วกลับมาใช้อีก
+
+## 8. File organization / โครงสร้างการจัดเก็บไฟล์
+
+- Keep tracked templates in the repository root: `.env.example`, `.env.agent`,
+  `SETUP_GUIDE.md`, `SECRETS_REFERENCE.md`
+- Keep live credentials outside versioned files: `.env`, GitHub Secrets, local
+  config such as payment `config.json`, or the Square saved key file
+- เก็บเทมเพลตที่ track ได้ไว้ที่ root ของ repository
+- เก็บ credential จริงไว้นอกไฟล์ที่ version control เช่น `.env`, GitHub
+  Secrets, `config.json` ของ payment หรือไฟล์ key ที่ Square บันทึกไว้
