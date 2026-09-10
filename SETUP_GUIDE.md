@@ -30,8 +30,8 @@ chmod 600 .env
 | Use case | Required values |
 | --- | --- |
 | Hourly market data / ข้อมูลรายชั่วโมง | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY`, `BINANCE_SYMBOLS` |
-| Daily Ondo-style report / รายงานรายวัน | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY`, `BINANCE_STOCKS`, `BINANCE_STOCK_MAP` |
-| Web3 / USDT tools / เครื่องมือ Web3 | `ETH_RPC_URL`, `PRIVATE_KEY`, `ETH_ADDRESS_SENDER`, `ADDRESS_RECEIPT` |
+| Daily Ondo-style report / รายงานรายวัน | `BINANCE_API_KEY`, `BINANCE_SECRET_KEY`, `BINANCE_UID`, `BINANCE_STOCKS`, `BINANCE_STOCK_MAP` |
+| Web3 / USDT tools / เครื่องมือ Web3 | `ETH_RPC_URL`, `PRIVATE_KEY`, `ETH_ADDRESS_SENDER`, `BINANCE_WALLET_RECEIVE` |
 | Payment skill / สกิล Payment | `PAYMENT_API_KEY`, `PAYMENT_API_SECRET` |
 | Square posting / โพสต์ Square | `BINANCE_SQUARE_OPENAPI_KEY` |
 
@@ -49,13 +49,31 @@ Open:
 - Repository → **Settings** → **Secrets and variables** → **Actions**
 - ไปที่ Repository → **Settings** → **Secrets and variables** → **Actions**
 
-Create these **repository secrets**:
+Requested repository variable names:
+
+ค่าชื่อ repository variable ที่ร้องขอ:
+
+| Variable name | Runtime meaning |
+| --- | --- |
+| `BINANCE_UID` | Binance account UID / ใช้เป็น UID ของบัญชี Binance |
+| `BINANCE_API_KEY` | Binance API key / API key ของ Binance |
+| `BINANCE_SECRET_KEY` | Binance secret key / secret key ของ Binance |
+| `BINANCE_IP_APILIST` | Allowed API IP list / รายการ IP ที่อนุญาต |
+| `BINANCE_WALLET_RECEIVE` | Receive wallet address / ที่อยู่กระเป๋าสำหรับรับ |
+
+Sensitive values should still be stored as GitHub Secrets when possible.
+
+ค่าที่อ่อนไหวควรเก็บเป็น GitHub Secrets เมื่อทำได้
+
+Create these **repository secrets** or secure equivalents:
 
 | Secret | Why it is a secret (EN) | เหตุผลที่ควรเป็น secret (TH) |
 | --- | --- | --- |
 | `BINANCE_API_KEY` | Binance authenticated API access | ใช้ยืนยันตัวตนกับ Binance API |
 | `BINANCE_SECRET_KEY` | Signs Binance requests | ใช้ลงลายเซ็นคำขอ Binance |
-| `BINANCE_ID` | Account identifier for workflow parity/validation | ตัวระบุบัญชีสำหรับ workflow/validation |
+| `BINANCE_UID` | Account identifier for workflow parity/validation | ตัวระบุบัญชีสำหรับ workflow/validation |
+| `BINANCE_IP_APILIST` | API IP allowlist metadata | ข้อมูลรายการ IP ที่อนุญาต |
+| `BINANCE_WALLET_RECEIVE` | Wallet receive address | ที่อยู่กระเป๋ารับ |
 | `BINANCE_ALHFA_GOOGLON` | Private stock-map payload mapped to `BINANCE_STOCK_MAP` | payload map ส่วนตัวที่ map ไปยัง `BINANCE_STOCK_MAP` |
 | `BINANCE_SQUARE_OPENAPI_KEY` | Binance Square publishing access | ใช้เผยแพร่ไปยัง Binance Square |
 | `PAYMENT_API_KEY` | Payment API authentication | ใช้ยืนยันตัวตน Payment API |
@@ -97,6 +115,13 @@ defaults:
 3. map ค่าเหล่านั้นเป็น runtime env ภายใน workflow
 4. ดูตัวอย่างที่ `.github/workflows/AGENT_VARIABLES.yml`
 
+Current example mappings:
+
+ตัวอย่าง mapping ปัจจุบัน:
+
+- `BINANCE_UID` → `BINANCE_ID`
+- `BINANCE_WALLET_RECEIVE` → `ADDRESS_RECEIPT`
+
 ## 6. Example use cases / ตัวอย่างการใช้งาน
 
 ### Read-only data collection / การดึงข้อมูลแบบอ่านอย่างเดียว
@@ -127,9 +152,9 @@ BINANCE_SQUARE_OPENAPI_KEY=your_key node skills/binance/square-post/scripts/save
   identifies a private account.
 - ให้ใช้ repository secrets สำหรับค่าที่เกี่ยวกับการยืนยันตัวตน การลงนาม
   การชำระเงิน หรือการระบุตัวบัญชีส่วนตัว
-- Treat wallet addresses and `BINANCE_ID` as sensitive operational metadata if
+- Treat wallet addresses and `BINANCE_UID` as sensitive operational metadata if
   they identify real accounts you do not want to expose.
-- หาก wallet address หรือ `BINANCE_ID` ชี้ไปยังบัญชีจริงที่ไม่ต้องการเปิดเผย
+- หาก wallet address หรือ `BINANCE_UID` ชี้ไปยังบัญชีจริงที่ไม่ต้องการเปิดเผย
   ให้ถือว่าเป็นข้อมูลอ่อนไหวเชิงปฏิบัติการ
 - Do not print full secrets in workflow logs.
 - ห้ามพิมพ์ค่า secret แบบเต็มลงใน workflow logs

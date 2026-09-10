@@ -17,10 +17,18 @@ jobs:
     name: Show safe variable mapping
     runs-on: ubuntu-latest
     env:
-      # Secrets / ข้อมูลอ่อนไหว
-      BINANCE_API_KEY: ${{ secrets.BINANCE_API_KEY }}
-      BINANCE_SECRET_KEY: ${{ secrets.BINANCE_SECRET_KEY }}
-      BINANCE_ID: ${{ secrets.BINANCE_ID }}
+      # Requested repository variable names / ชื่อตัวแปร repository ที่ร้องขอ
+      BINANCE_UID: ${{ vars.BINANCE_UID }}
+      BINANCE_API_KEY: ${{ vars.BINANCE_API_KEY }}
+      BINANCE_SECRET_KEY: ${{ vars.BINANCE_SECRET_KEY }}
+      BINANCE_IP_APILIST: ${{ vars.BINANCE_IP_APILIST }}
+      BINANCE_WALLET_RECEIVE: ${{ vars.BINANCE_WALLET_RECEIVE }}
+
+      # Compatibility runtime mappings / mapping สำหรับ runtime ที่ใช้อยู่
+      BINANCE_ID: ${{ vars.BINANCE_UID }}
+      ADDRESS_RECEIPT: ${{ vars.BINANCE_WALLET_RECEIVE }}
+
+      # Additional secrets / ข้อมูลอ่อนไหวเพิ่มเติม
       BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
       BINANCE_SQUARE_OPENAPI_KEY: ${{ secrets.BINANCE_SQUARE_OPENAPI_KEY }}
       PAYMENT_API_KEY: ${{ secrets.PAYMENT_API_KEY }}
@@ -40,7 +48,6 @@ jobs:
       BINANCE_STOCKS: ${{ vars.BINANCE_STOCKS }}
       ETH_TOKENCONTRACT_USDT: ${{ vars.ETH_TOKENCONTRACT_USDT }}
       ETH_ADDRESS_SENDER: ${{ vars.ETH_ADDRESS_SENDER }}
-      ADDRESS_RECEIPT: ${{ vars.ADDRESS_RECEIPT }}
       PAYMENT_BASE_URL: ${{ vars.PAYMENT_BASE_URL }}
 
     steps:
@@ -53,6 +60,7 @@ jobs:
           required_secrets=(
             BINANCE_API_KEY
             BINANCE_SECRET_KEY
+            BINANCE_UID
           )
           for name in "${required_secrets[@]}"; do
             if [ -z "${!name:-}" ]; then
@@ -79,8 +87,11 @@ jobs:
           print("BASE_URL                =", os.getenv("BASE_URL") or "https://api.binance.com")
           print("BINANCE_SYMBOLS         =", os.getenv("BINANCE_SYMBOLS") or "BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT")
           print("DATA_FILE               =", os.getenv("DATA_FILE") or "data/binance-1h.data")
+          print("BINANCE_UID             =", os.getenv("BINANCE_UID") or "(not set)")
+          print("BINANCE_IP_APILIST      =", os.getenv("BINANCE_IP_APILIST") or "(not set)")
           print("BINANCE_API_KEY         =", mask(os.getenv("BINANCE_API_KEY", "")))
           print("BINANCE_SECRET_KEY      =", mask(os.getenv("BINANCE_SECRET_KEY", "")))
+          print("BINANCE_WALLET_RECEIVE  =", mask(os.getenv("BINANCE_WALLET_RECEIVE", "")))
           print("BINANCE_STOCK_MAP set?  =", "yes" if os.getenv("BINANCE_STOCK_MAP") else "no")
           print("PRIVATE_KEY             =", mask(os.getenv("PRIVATE_KEY", "")))
           PYEOF
