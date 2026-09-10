@@ -90,6 +90,37 @@ export function validateAsset(raw) {
   return value;
 }
 
+function getDecimalParts(value) {
+  const [whole = '0', fraction = ''] = String(value).split('.');
+  const digits = `${whole}${fraction}`.replace(/^0+(?=\d)/, '') || '0';
+  return {
+    coefficient: BigInt(digits),
+    scale: fraction.length,
+  };
+}
+
+function formatFixedPoint(coefficient, scale) {
+  const digits = coefficient.toString().padStart(scale + 1, '0');
+  const whole = digits.slice(0, Math.max(1, digits.length - scale));
+  if (scale === 0) return whole;
+  return `${whole}.${digits.slice(-scale)}`;
+}
+
+function roundCoefficient(coefficient, currentScale, targetScale) {
+  if (currentScale === targetScale) return coefficient;
+  if (currentScale < targetScale) return coefficient * (10n ** BigInt(targetScale - currentScale));
+
+  const divisor = 10n ** BigInt(currentScale - targetScale);
+  const quotient = coefficient / divisor;
+  const remainder = coefficient % divisor;
+  return remainder * 2n >= divisor ? quotient + 1n : quotient;
+}
+
+function formatDecimalToScale(value, targetScale) {
+  const decimal = getDecimalParts(value);
+  return formatFixedPoint(roundCoefficient(decimal.coefficient, decimal.scale, targetScale), targetScale);
+}
+
 export function validateAmount(raw) {
   const value = requireNonEmpty(raw, 'BINANCE_TRANSFER_AMOUNT');
   if (!/^\d+(?:\.\d+)?$/.test(value)) {
@@ -99,7 +130,7 @@ export function validateAmount(raw) {
   if (fraction.length > AMOUNT_DECIMAL_LIMIT) {
     throw new DailyDataError('invalid_amount_precision', `BINANCE_TRANSFER_AMOUNT supports up to ${AMOUNT_DECIMAL_LIMIT} decimal places`);
   }
-  if (!(Number(value) > 0)) {
+  if (getDecimalParts(value).coefficient <= 0n) {
     throw new DailyDataError('invalid_amount', 'BINANCE_TRANSFER_AMOUNT must be greater than zero');
   }
   return value;
@@ -288,6 +319,7 @@ export async function estimateFiatValue(config, { fetchImpl = globalThis.fetch }
     };
   }
 
+  const amount = getDecimalParts(config.amount);
   for (const candidate of candidates) {
     try {
       const quote = await fetchTickerPrice(candidate.symbol, {
@@ -295,17 +327,22 @@ export async function estimateFiatValue(config, { fetchImpl = globalThis.fetch }
         mirrorUrl: config.mirrorUrl,
         fetchImpl,
       });
-      const price = Number(quote?.price);
-      if (!Number.isFinite(price) || !(price > 0)) continue;
+      const price = String(quote?.price ?? '').trim();
+      if (!/^\d+(?:\.\d+)?$/.test(price)) continue;
+      const parsedPrice = getDecimalParts(price);
+      if (parsedPrice.coefficient <= 0n) continue;
       return {
         valuation_available: true,
         valuation_status: 'estimated',
         fiat_currency: config.fiatCurrency,
         market_symbol: candidate.symbol,
         estimated_from: candidate.estimated_from,
-        unit_price: price.toFixed(8),
-        estimated_value: (price * Number(config.amount)).toFixed(8),
-        note: `${config.fiatCurrency} value is an estimate at quote time from Binance public market data; it does not convert the transfer into fiat.`,
+        unit_price: formatDecimalToScale(price, 8),
+        estimated_value: formatFixedPoint(
+          roundCoefficient(amount.coefficient * parsedPrice.coefficient, amount.scale + parsedPrice.scale, 8),
+          8,
+        ),
+        note: `${config.fiatCurrency} value is an estimate at quote time from Binance public market data; it does not convert the transfer into fiat, bank settlement, or P2P payment execution.`,
       };
     } catch {
       // Try the next symbol candidate.
@@ -342,11 +379,11 @@ function buildResultSummary(result) {
   return lines;
 }
 
-async function defaultConfirmSend({ asset, amount, fromAccount, toAccount, targetUid }, { stdin = defaultStdin, stdout = defaultStdout } = {}) {
+export async function defaultConfirmSend({ asset, amount, fromAccount, toAccount, targetUid }, { stdin = defaultStdin, stdout = defaultStdout } = {}) {
   const rl = createInterface({ input: stdin, output: stdout });
   try {
     const answer = await rl.question(
-      `Live send requested.\nTarget UID: ${targetUid}\nAsset: ${asset}\nAmount: ${amount}\nAccount types: ${fromAccount} -> ${toAccount}\nType CONFIRM to continue: `,
+      `Live send requested.\nTarget UID: ${maskUid(targetUid)}\nAsset: ${asset}\nAmount: ${amount}\nAccount types: ${fromAccount} -> ${toAccount}\nType CONFIRM to continue: `,
     );
     return answer.trim() === 'CONFIRM';
   } finally {

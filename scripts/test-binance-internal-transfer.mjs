@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { PassThrough } from 'node:stream';
 
 const originalEnv = { ...process.env };
 const originalFetch = globalThis.fetch;
@@ -75,6 +76,7 @@ try {
   const moduleUrl = `${new URL('../skills/binance/internal-transfer/scripts/internal-transfer.mjs', import.meta.url).href}?test=${Date.now()}`;
   const {
     buildTransferRequestPreview,
+    defaultConfirmSend,
     estimateFiatValue,
     maskUid,
     resolveTransferConfig,
@@ -89,7 +91,10 @@ try {
   assert.equal(validateAsset('usdt'), 'USDT');
   assert.throws(() => validateAsset('usdt*'), /uppercase alphanumeric/);
   assert.equal(validateAmount('1.23456789'), '1.23456789');
+  const veryLargeAmount = '99999999999999999999999999.12345678';
+  assert.equal(validateAmount(veryLargeAmount), veryLargeAmount);
   assert.throws(() => validateAmount('0'), /greater than zero/);
+  assert.throws(() => validateAmount('000.00000000'), /greater than zero/);
   assert.throws(() => validateAmount('1.123456789'), /up to 8 decimal places/);
   assert.equal(maskUid('987654321'), '98*****21');
 
@@ -105,6 +110,32 @@ try {
   assert.equal(valuation.valuation_available, true);
   assert.equal(valuation.market_symbol, 'USDTUSDC');
   assert.equal(valuation.estimated_value, '10.25512500');
+  assert.equal(valuation.note.includes('bank settlement'), true);
+
+  const largeValuation = await estimateFiatValue({ ...config, amount: veryLargeAmount }, { fetchImpl: globalThis.fetch });
+  assert.equal(largeValuation.unit_price, '1.00050000');
+  assert.equal(largeValuation.estimated_value, '100049999999999999999999999.12301851');
+
+  const promptInput = new PassThrough();
+  const promptOutput = new PassThrough();
+  let promptText = '';
+  promptOutput.on('data', (chunk) => {
+    promptText += chunk.toString();
+  });
+  promptInput.end('CONFIRM\n');
+  const promptConfirmed = await defaultConfirmSend(
+    {
+      targetUid: '987654321',
+      asset: 'USDT',
+      amount: '10.25',
+      fromAccount: 'MAIN',
+      toAccount: 'FUNDING',
+    },
+    { stdin: promptInput, stdout: promptOutput },
+  );
+  assert.equal(promptConfirmed, true);
+  assert.ok(promptText.includes('Target UID: 98*****21'));
+  assert.ok(!promptText.includes('987654321'), 'confirmation prompt must not print the full target UID');
 
   const logs = [];
   const dryRunResult = await runInternalTransfer({
@@ -160,7 +191,7 @@ try {
   );
   assert.equal(requests.filter((request) => request.href.includes('/sapi/v1/asset/transfer')).length, 0, 'unsupported UID routing must stay non-mutating');
 
-  console.log('binance-internal-transfer:test passed — signing, validation, dry-run safety, confirmation gating, redaction, and USD valuation verified.');
+  console.log('binance-internal-transfer:test passed — signing, exact amount validation, dry-run safety, masked confirmation, redaction, and USD valuation verified.');
 } finally {
   globalThis.fetch = originalFetch;
   for (const key of Object.keys(process.env)) {

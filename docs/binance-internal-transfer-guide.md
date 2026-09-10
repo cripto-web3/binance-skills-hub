@@ -26,7 +26,7 @@ It does **not** document a recipient UID parameter for arbitrary UID-to-UID tran
 
 Because of that, this repository implements a **safe adapter boundary**:
 
-- `BINANCE_TARGET_UID` is validated and shown in the explicit confirmation prompt,
+- `BINANCE_TARGET_UID` is validated but masked anywhere it is shown to an operator,
 - the signed request preview shows the documented endpoint shape,
 - but live UID-routed mutation is refused instead of inventing unsupported behavior.
 
@@ -65,7 +65,7 @@ node /home/runner/work/binance-skills-hub/binance-skills-hub/skills/binance/inte
 
 `--send` always requires interactive confirmation containing:
 
-- target UID
+- masked target UID
 - asset
 - amount
 - account types
@@ -83,7 +83,7 @@ If the confirmation is not accepted, the script exits without mutation.
 ### USD valuation semantics
 
 `BINANCE_FIAT_CURRENCY=USD` enables a **read-only estimate** using Binance public market-data quotes such as `/api/v3/ticker/price`.  
-This is only a valuation/reporting aid at quote time; it does **not** mean the transfer itself is fiat.
+The script uses exact decimal/fixed-point arithmetic for amount validation and valuation formatting, and the result remains only a valuation/reporting aid at quote time. It does **not** mean the transfer itself is fiat, a bank settlement, or a P2P payment.
 
 If no suitable Binance public quote is available, valuation fails safe and the transfer preview still remains dry-run only.
 
@@ -113,7 +113,7 @@ endpoint นี้รองรับพารามิเตอร์แบบ a
 
 ดังนั้น repo นี้จึงใช้ **safe adapter boundary**:
 
-- รับ `BINANCE_TARGET_UID` เพื่อ validation และแสดงในขั้นตอนยืนยัน
+- รับ `BINANCE_TARGET_UID` เพื่อ validation แต่จะแสดงแบบ masked เมื่อมี output ให้ผู้ปฏิบัติงานเห็น
 - แสดง signed request preview ตามรูปแบบ endpoint ที่มีเอกสารรองรับ
 - แต่ปฏิเสธ live mutation ที่อ้างว่าโอนไปยัง UID โดยตรง เพื่อไม่สร้างพฤติกรรมที่ Binance ยังไม่ได้ document
 
@@ -151,7 +151,7 @@ node /home/runner/work/binance-skills-hub/binance-skills-hub/skills/binance/inte
 
 `--send` จะมี interactive confirmation ทุกครั้ง โดยต้องแสดง:
 
-- target UID
+- target UID แบบ masked
 - asset
 - amount
 - account types
@@ -169,6 +169,6 @@ node /home/runner/work/binance-skills-hub/binance-skills-hub/skills/binance/inte
 ### ความหมายของ USD valuation
 
 `BINANCE_FIAT_CURRENCY=USD` ใช้สำหรับ **ประเมินมูลค่าโดยประมาณ** จาก Binance public market-data endpoint เช่น `/api/v3/ticker/price` เท่านั้น  
-ไม่ได้แปลว่าการโอนนั้นกลายเป็นการโอนเงิน Fiat
+สคริปต์ใช้ exact decimal/fixed-point arithmetic สำหรับ validation จำนวนเงินและการ format valuation และไม่ได้แปลว่าการโอนนั้นกลายเป็นการโอนเงิน Fiat, การโอนเข้าธนาคาร หรือการชำระเงินแบบ P2P
 
 หากไม่พบราคา public ที่เหมาะสม ระบบจะ fail-safe และยังคงเป็นเพียง dry-run/preview
