@@ -27,7 +27,7 @@ Provide a narrowly scoped, dry-run-first CLI for Binance internal transfer revie
 Binance's documented wallet universal-transfer endpoint uses account-type transfer parameters (`type`, `asset`, `amount`) and does **not** document a recipient-UID parameter.  
 Therefore this skill:
 
-- accepts `BINANCE_TARGET_UID` for validation and operator confirmation,
+- accepts `BINANCE_TARGET_UID` for validation while masking it in operator-facing output,
 - shows the exact signed request shape for the documented endpoint,
 - but refuses to perform a live UID-routed transfer.
 
@@ -60,6 +60,6 @@ Optional:
 
 - Dry-run is the default.
 - `--send` always asks for interactive confirmation.
-- The script never logs API keys, secret keys, raw signatures, or full transfer payloads.
+- The script never logs API keys, secret keys, raw signatures, full target UIDs, or full transfer payloads.
 - Do not store target UID, amounts, or transfer previews in tracked files.
 - If you persist local runtime output yourself, keep it under an ignored `.data` path with file mode `600`.
