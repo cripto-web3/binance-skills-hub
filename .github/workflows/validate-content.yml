@@ -65,3 +65,16 @@ jobs:
         uses: oven-sh/setup-bun@v2
       - name: Test offline QR metadata schema
         run: bun run qrcode:test
+
+  test-binance-daily-data:
+    name: Test Binance daily data helpers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test daily data safety and signing helpers
+        run: npm run binance-daily:test
