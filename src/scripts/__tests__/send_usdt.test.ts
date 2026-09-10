@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 
 import {
@@ -139,4 +142,75 @@ test('runSendUsdt send mode requires confirmation and sends transfer when allowe
   assert.equal(result.transactionId, '987654321');
   assert.equal(calls.filter((c) => c.url.includes('/sapi/v1/account/universal-transfer')).length, 1);
   assert.equal(calls.find((c) => c.url.includes('/sapi/v1/account/universal-transfer'))?.method, 'POST');
+});
+
+test('runSendUsdt accepts requested sender/contract alias variable names', async () => {
+  const fetchImpl: typeof globalThis.fetch = async () => new Response('{}', { status: 200 });
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_ADDRESS_SENDER: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRAC_ADDRESS: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_IP_APILIST: '192.168.1.1,10.0.0.1',
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    fetchImpl,
+    now: () => 1700000000000,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+});
+
+test('runSendUsdt loads .env.local before .env', async () => {
+  const cwd = process.cwd();
+  const dir = mkdtempSync(join(tmpdir(), 'send-usdt-env-'));
+  const logs: string[] = [];
+
+  try {
+    writeFileSync(join(dir, '.env.local'), [
+      'BINANCE_API_KEY=local_key',
+      'BINANCE_SECRET_KEY=local_secret',
+      'BINANCE_UID=123456',
+      'BINANCE_CREATOR_ADDRESS=0x1234567890abcdef1234567890abcdef12345678',
+      'BINANCE_CONTRACT_ADDRESS=0xdac17f958d2ee523a2206206994597c13d831ec7',
+      'BINANCE_WALLET_RECEIVE=0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+      'BINANCE_WITHDRAW_AMOUNT=1000000',
+      'BINANCE_NETWORK=ETH',
+      'BINANCE_CHAIN_ID=1',
+    ].join('\n'));
+    writeFileSync(join(dir, '.env'), 'BINANCE_API_KEY=env_key\n');
+
+    process.chdir(dir);
+
+    const fetchImpl: typeof globalThis.fetch = async (input, init) => {
+      const url = String(input);
+      if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+        assert.equal((init?.headers as Record<string, string>)['X-MBX-APIKEY'], 'local_key');
+        return new Response('{}', { status: 200 });
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    };
+
+    const result = await runSendUsdt({
+      argv: [],
+      env: {},
+      fetchImpl,
+      now: () => 1700000000000,
+      logger: { log: (line: string) => logs.push(line), error: () => {} },
+    });
+
+    assert.equal(result.mode, 'dry-run');
+  } finally {
+    process.chdir(cwd);
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

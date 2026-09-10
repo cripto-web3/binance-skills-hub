@@ -78,10 +78,8 @@ function buildQueryString(params: Record<string, string>): string {
   return searchParams.toString();
 }
 
-function loadDotEnvIfPresent(cwd = process.cwd(), env = process.env): void {
-  const envPath = resolve(cwd, '.env');
+function loadEnvFileIfPresent(envPath: string, env = process.env): void {
   if (!existsSync(envPath)) return;
-
   const content = readFileSync(envPath, 'utf8');
   for (const line of content.split(/\r?\n/)) {
     const trimmed = line.trim();
@@ -100,6 +98,11 @@ function loadDotEnvIfPresent(cwd = process.cwd(), env = process.env): void {
 
     env[key] = value;
   }
+}
+
+function loadDotEnvIfPresent(cwd = process.cwd(), env = process.env): void {
+  loadEnvFileIfPresent(resolve(cwd, '.env.local'), env);
+  loadEnvFileIfPresent(resolve(cwd, '.env'), env);
 }
 
 export function validateEthereumAddress(addr: string): boolean {
@@ -149,9 +152,16 @@ function resolveConfig(env = process.env) {
   const uid = requireValue(env.BINANCE_UID, 'BINANCE_UID');
   if (!UID_PATTERN.test(uid)) throw new SendUsdtError('invalid_uid', 'BINANCE_UID must be a numeric string');
 
-  const creatorAddress = requireValue(env.BINANCE_CREATOR_ADDRESS, 'BINANCE_CREATOR_ADDRESS');
-  const contractAddress = requireValue(env.BINANCE_CONTRACT_ADDRESS, 'BINANCE_CONTRACT_ADDRESS');
+  const creatorAddress = requireValue(
+    env.BINANCE_CREATOR_ADDRESS ?? env.BINANCE_ADDRESS_SENDER,
+    'BINANCE_CREATOR_ADDRESS or BINANCE_ADDRESS_SENDER',
+  );
+  const contractAddress = requireValue(
+    env.BINANCE_CONTRACT_ADDRESS ?? env.BINANCE_CONTRAC_ADDRESS,
+    'BINANCE_CONTRACT_ADDRESS or BINANCE_CONTRAC_ADDRESS',
+  );
   const walletReceive = requireValue(env.BINANCE_WALLET_RECEIVE, 'BINANCE_WALLET_RECEIVE');
+  const ipApiList = String(env.BINANCE_IP_APILIST ?? '').trim();
 
   if (!validateEthereumAddress(creatorAddress)) throw new SendUsdtError('invalid_address', 'BINANCE_CREATOR_ADDRESS must be a valid Ethereum address');
   if (!validateEthereumAddress(contractAddress)) throw new SendUsdtError('invalid_address', 'BINANCE_CONTRACT_ADDRESS must be a valid Ethereum address');
@@ -173,6 +183,7 @@ function resolveConfig(env = process.env) {
     creatorAddress,
     contractAddress,
     walletReceive,
+    ipApiList,
     amount,
     network,
     chainId,
@@ -321,6 +332,7 @@ export async function runSendUsdt({
         creatorAddress: config.creatorAddress,
         contractAddress: config.contractAddress,
         walletReceive: config.walletReceive,
+        ipApiList: config.ipApiList || '[not-set]',
         network: config.network,
         chainId: config.chainId,
       },
