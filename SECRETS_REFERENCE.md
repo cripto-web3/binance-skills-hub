@@ -19,7 +19,6 @@ variables ที่โค้ดและ workflows ของ Binance Skills Hub 
 | `BINANCE_SECRET_KEY` | `BINANCE_SECRET_KEY` | Yes | none | `scripts/fetch-hourly-data.mjs`, `scripts/fetch-daily-data.mjs`, `.github/workflows/binance-1h-data.yml`, `.github/workflows/binance-daily-data.yml`, `.github/workflows/use-secrets.yml`, `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts` |
 | `BINANCE_UID` | `BINANCE_UID` | Yes | account UID | Documented repository variable name; `.github/workflows/AGENT_VARIABLES.yml` maps it to `BINANCE_ID` for compatibility |
 | `BINANCE_IP_APILIST` | `BINANCE_IP_APILIST` | Yes if it exposes trusted infrastructure | `127.0.0.1/32,10.0.0.0/24` | Documented in `.env.example`, `.env.agent`, `SETUP_GUIDE.md`, and `.github/workflows/AGENT_VARIABLES.yml` as repository configuration metadata |
-| `BINANCE_WALLET_RECEIVE` | `BINANCE_WALLET_RECEIVE` | Yes if it identifies a private receiving address | `0x...` | Documented repository variable name; `.github/workflows/AGENT_VARIABLES.yml` maps it to `ADDRESS_RECEIPT` for compatibility |
 | `BINANCE_STOCK_MAP` | `BINANCE_ALHFA_GOOGLON` | Yes | JSON object | `scripts/fetch-daily-data.mjs` reads `BINANCE_STOCK_MAP`; `.github/workflows/binance-daily-data.yml` currently maps secret `BINANCE_ALHFA_GOOGLON` into that runtime name |
 | `BINANCE_SQUARE_OPENAPI_KEY` | `BINANCE_SQUARE_OPENAPI_KEY` | Yes | none | `skills/binance/square-post/scripts/lib.mjs`, `skills/binance/square-post/scripts/save-key.mjs` |
 | `PAYMENT_API_KEY` | `PAYMENT_API_KEY` | Yes | none | `skills/binance/payment/common.py` |
@@ -42,7 +41,7 @@ variables ที่โค้ดและ workflows ของ Binance Skills Hub 
 | `BINANCE_STOCKS` | Repository variable `BINANCE_STOCKS` | No | `GOOGL,AAPL,TSLA` | `scripts/fetch-daily-data.mjs`, `.github/workflows/binance-daily-data.yml` |
 | `ETH_TOKENCONTRACT_USDT` | Repository variable `ETH_TOKENCONTRACT_USDT` | No | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
 | `ETH_ADDRESS_SENDER` | Repository variable or secret, depending on privacy needs | No by default | `0x...` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts`, `skills/binance-web3/binance-hmac-skill/scripts/hmac_sign.ts` |
-| `ADDRESS_RECEIPT` | Usually mapped from repository variable `BINANCE_WALLET_RECEIVE` | No by default | `0x...` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
+| `ADDRESS_RECEIPT` | Local `.env.local` value, usually paired with `BINANCE_WALLET_RECEIVE` | No by default | `0x...` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
 | `PAYMENT_BASE_URL` | Repository variable `PAYMENT_BASE_URL` | No | `https://bpay.binanceapi.com` | `skills/binance/payment/common.py` |
 
 ## Usage notes / หมายเหตุการใช้งาน
@@ -56,6 +55,16 @@ variables ที่โค้ดและ workflows ของ Binance Skills Hub 
 - คัดลอก `.env.example` เป็น `.env`
 - กรอกค่าจริงเฉพาะส่วนที่ใช้งาน
 - เก็บ `.env` ไว้ local และห้าม commit
+
+### Local `.env.local` / การใช้ `.env.local` แบบ local
+
+- Keep `BINANCE_WALLET_RECEIVE` in `.env.local`
+- If needed for current Web3 scripts, mirror it to `ADDRESS_RECEIPT`
+- Store `.env.local` locally and never commit it
+
+- ให้เก็บ `BINANCE_WALLET_RECEIVE` ไว้ใน `.env.local`
+- หากจำเป็นกับสคริปต์ Web3 ปัจจุบัน ให้ใส่ค่าเดียวกันใน `ADDRESS_RECEIPT`
+- เก็บ `.env.local` ไว้ local และห้าม commit
 
 ### Copilot Cloud Agent / การใช้กับ Copilot Cloud Agent
 
@@ -79,7 +88,7 @@ variables ที่โค้ดและ workflows ของ Binance Skills Hub 
 
 ### Web3 transfer / โอน USDT บน Web3
 
-`ETH_RPC_URL`, `PRIVATE_KEY`, `ETH_ADDRESS_SENDER`, `BINANCE_WALLET_RECEIVE`
+`ETH_RPC_URL`, `PRIVATE_KEY`, `ETH_ADDRESS_SENDER`, `BINANCE_WALLET_RECEIVE` (`.env.local`)
 
 ### Payment / การชำระเงิน
 

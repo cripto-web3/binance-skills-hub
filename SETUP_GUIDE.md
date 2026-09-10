@@ -59,7 +59,13 @@ Requested repository variable names:
 | `BINANCE_API_KEY` | Binance API key / API key ของ Binance |
 | `BINANCE_SECRET_KEY` | Binance secret key / secret key ของ Binance |
 | `BINANCE_IP_APILIST` | Allowed API IP list / รายการ IP ที่อนุญาต |
-| `BINANCE_WALLET_RECEIVE` | Receive wallet address / ที่อยู่กระเป๋าสำหรับรับ |
+| `BINANCE_WALLET_RECEIVE` | Receive wallet address stored in `.env.local` / ที่อยู่กระเป๋ารับที่เก็บใน `.env.local` |
+
+Use repository variables for the first four names above. Keep
+`BINANCE_WALLET_RECEIVE` in local `.env.local`.
+
+ใช้ repository variables สำหรับ 4 ชื่อแรกด้านบน และให้เก็บ
+`BINANCE_WALLET_RECEIVE` ไว้ใน `.env.local` แบบ local
 
 Sensitive values should still be stored as GitHub Secrets when possible.
 
@@ -73,7 +79,6 @@ Create these **repository secrets** or secure equivalents:
 | `BINANCE_SECRET_KEY` | Signs Binance requests | ใช้ลงลายเซ็นคำขอ Binance |
 | `BINANCE_UID` | Account identifier for workflow parity/validation | ตัวระบุบัญชีสำหรับ workflow/validation |
 | `BINANCE_IP_APILIST` | API IP allowlist metadata | ข้อมูลรายการ IP ที่อนุญาต |
-| `BINANCE_WALLET_RECEIVE` | Wallet receive address | ที่อยู่กระเป๋ารับ |
 | `BINANCE_ALHFA_GOOGLON` | Private stock-map payload mapped to `BINANCE_STOCK_MAP` | payload map ส่วนตัวที่ map ไปยัง `BINANCE_STOCK_MAP` |
 | `BINANCE_SQUARE_OPENAPI_KEY` | Binance Square publishing access | ใช้เผยแพร่ไปยัง Binance Square |
 | `PAYMENT_API_KEY` | Payment API authentication | ใช้ยืนยันตัวตน Payment API |
@@ -115,12 +120,24 @@ defaults:
 3. map ค่าเหล่านั้นเป็น runtime env ภายใน workflow
 4. ดูตัวอย่างที่ `.github/workflows/AGENT_VARIABLES.yml`
 
+Local-only wallet setting:
+
+ค่ากระเป๋ารับแบบ local เท่านั้น:
+
+```bash
+cat > /home/runner/work/binance-skills-hub/binance-skills-hub/.env.local <<'EOF'
+BINANCE_WALLET_RECEIVE=0x0000000000000000000000000000000000000000
+ADDRESS_RECEIPT=0x0000000000000000000000000000000000000000
+EOF
+chmod 600 /home/runner/work/binance-skills-hub/binance-skills-hub/.env.local
+```
+
 Current example mappings:
 
 ตัวอย่าง mapping ปัจจุบัน:
 
 - `BINANCE_UID` → `BINANCE_ID`
-- `BINANCE_WALLET_RECEIVE` → `ADDRESS_RECEIPT`
+- `.env.local` `BINANCE_WALLET_RECEIVE` → local runtime `ADDRESS_RECEIPT`
 
 ## 6. Example use cases / ตัวอย่างการใช้งาน
 
@@ -167,6 +184,10 @@ BINANCE_SQUARE_OPENAPI_KEY=your_key node skills/binance/square-post/scripts/save
   `SETUP_GUIDE.md`, `SECRETS_REFERENCE.md`
 - Keep live credentials outside versioned files: `.env`, GitHub Secrets, local
   config such as payment `config.json`, or the Square saved key file
+- Keep `BINANCE_WALLET_RECEIVE` in `.env.local` because it is local-only wallet
+  routing data for the current setup
 - เก็บเทมเพลตที่ track ได้ไว้ที่ root ของ repository
 - เก็บ credential จริงไว้นอกไฟล์ที่ version control เช่น `.env`, GitHub
   Secrets, `config.json` ของ payment หรือไฟล์ key ที่ Square บันทึกไว้
+- ให้เก็บ `BINANCE_WALLET_RECEIVE` ไว้ใน `.env.local` เพราะเป็นข้อมูลเส้นทาง
+  กระเป๋าแบบ local-only สำหรับ setup ปัจจุบัน

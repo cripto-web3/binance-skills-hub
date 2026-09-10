@@ -22,11 +22,9 @@ jobs:
       BINANCE_API_KEY: ${{ vars.BINANCE_API_KEY }}
       BINANCE_SECRET_KEY: ${{ vars.BINANCE_SECRET_KEY }}
       BINANCE_IP_APILIST: ${{ vars.BINANCE_IP_APILIST }}
-      BINANCE_WALLET_RECEIVE: ${{ vars.BINANCE_WALLET_RECEIVE }}
 
       # Compatibility runtime mappings / mapping สำหรับ runtime ที่ใช้อยู่
       BINANCE_ID: ${{ vars.BINANCE_UID }}
-      ADDRESS_RECEIPT: ${{ vars.BINANCE_WALLET_RECEIVE }}
 
       # Additional secrets / ข้อมูลอ่อนไหวเพิ่มเติม
       BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
@@ -91,7 +89,7 @@ jobs:
           print("BINANCE_IP_APILIST      =", os.getenv("BINANCE_IP_APILIST") or "(not set)")
           print("BINANCE_API_KEY         =", mask(os.getenv("BINANCE_API_KEY", "")))
           print("BINANCE_SECRET_KEY      =", mask(os.getenv("BINANCE_SECRET_KEY", "")))
-          print("BINANCE_WALLET_RECEIVE  =", mask(os.getenv("BINANCE_WALLET_RECEIVE", "")))
+          print("BINANCE_WALLET_RECEIVE  =", "local .env.local only")
           print("BINANCE_STOCK_MAP set?  =", "yes" if os.getenv("BINANCE_STOCK_MAP") else "no")
           print("PRIVATE_KEY             =", mask(os.getenv("PRIVATE_KEY", "")))
           PYEOF
