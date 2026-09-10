@@ -12,7 +12,7 @@ import {
 import { mainnet } from "viem/chains";
 import { maskString } from "./mask_key.js";
 
-const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "0xdAC17F958D2ee523a2206206994597C13D831ec7") as Address;
+const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "") as Address;
 const SENDER = (process.env.ETH_ADDRESS_SENDER || "") as Address;
 const RECEIPT = (process.env.ADDRESS_RECEIPT || "") as Address;
 const RPC_URL = process.env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com";
@@ -37,6 +37,17 @@ async function main() {
   console.log(`  เวลา: ${new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}`);
   console.log("════════════════════════════════════════════════════");
 
+  if (!USDT) {
+    console.error("❌ ยังไม่ได้ตั้งค่า ETH_TOKENCONTRACT_USDT ใน .env");
+    process.exit(1);
+  }
+  let usdtAddress: Address;
+  try {
+    usdtAddress = getAddress(USDT);
+  } catch {
+    console.error("❌ ETH_TOKENCONTRACT_USDT ไม่ถูกต้อง (ต้องเป็น address แบบ 0x...)");
+    process.exit(1);
+  }
   const senderEip55 = getAddress(SENDER);
   const receiptEip55 = getAddress(RECEIPT);
   const publicClient = createPublicClient({ chain: mainnet, transport: http(RPC_URL) });
@@ -44,10 +55,10 @@ async function main() {
   // ดึงข้อมูลครั้งเดียว (parallel)
   const [block, usdtName, usdtSymbol, usdtDecimals, usdtBalRaw, ethBal, nonce, feeData] = await Promise.all([
     publicClient.getBlock({ blockTag: "latest" }),
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "name" }),
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "symbol" }),
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "decimals" }),
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "balanceOf", args: [senderEip55] }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "name" }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "symbol" }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "decimals" }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "balanceOf", args: [senderEip55] }),
     publicClient.getBalance({ address: senderEip55 }),
     publicClient.getTransactionCount({ address: senderEip55 }),
     publicClient.estimateFeesPerGas(),
@@ -70,11 +81,11 @@ async function main() {
   console.log("RPC          :", RPC_URL);
 
   console.log("\n── 🪙 USDT (ERC-20) ──");
-  console.log("Contract     :", USDT);
+  console.log("Contract     :", maskString(usdtAddress));
   console.log("Token        :", usdtName, `(${usdtSymbol}) — ${usdtDecimals} decimals`);
   console.log(`ยอดคงเหลือ     : ${usdtBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} USDT`);
   console.log("Sender       :", senderEip55);
-  console.log("Etherscan    :", `https://etherscan.io/token/${USDT}?a=${senderEip55}`);
+  console.log("Etherscan    :", `https://etherscan.io/token/${usdtAddress}?a=${senderEip55}`);
 
   console.log("\n── 💎 ETH (สำหรับ Gas) ──");
   console.log(`ยอดคงเหลือ     : ${ethBalance} ETH`);
@@ -119,7 +130,6 @@ async function main() {
     block_height: Number(block.number),
     sender: senderEip55,
     receipt: receiptEip55,
-    usdt_contract: USDT,
     usdt_balance: usdtBalance,
     eth_balance: ethBalance,
     nonce: nonce,

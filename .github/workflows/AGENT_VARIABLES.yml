@@ -1,0 +1,95 @@
+name: Agent Variables Example
+
+# Example only / ตัวอย่างเท่านั้น
+# Shows how to map GitHub Secrets and Variables into runtime env names for
+# Binance Skills Hub and Copilot Cloud Agent-friendly workflows.
+# แสดงวิธี map GitHub Secrets และ Variables ไปเป็น runtime env สำหรับ
+# Binance Skills Hub และ workflow ที่เหมาะกับ Copilot Cloud Agent
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  show-safe-configuration:
+    name: Show safe variable mapping
+    runs-on: ubuntu-latest
+    env:
+      # Requested repository variable names / ชื่อตัวแปร repository ที่ร้องขอ
+      BINANCE_UID: ${{ vars.BINANCE_UID }}
+      BINANCE_API_KEY: ${{ vars.BINANCE_API_KEY }}
+      BINANCE_SECRET_KEY: ${{ vars.BINANCE_SECRET_KEY }}
+      BINANCE_IP_APILIST: ${{ vars.BINANCE_IP_APILIST }}
+
+      # Compatibility runtime mappings / mapping สำหรับ runtime ที่ใช้อยู่
+      BINANCE_ID: ${{ vars.BINANCE_UID }}
+
+      # Additional secrets / ข้อมูลอ่อนไหวเพิ่มเติม
+      BINANCE_STOCK_MAP: ${{ secrets.BINANCE_ALHFA_GOOGLON }}
+      BINANCE_SQUARE_OPENAPI_KEY: ${{ secrets.BINANCE_SQUARE_OPENAPI_KEY }}
+      PAYMENT_API_KEY: ${{ secrets.PAYMENT_API_KEY }}
+      PAYMENT_API_SECRET: ${{ secrets.PAYMENT_API_SECRET }}
+      ETH_RPC_URL: ${{ secrets.ETH_RPC_URL }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+
+      # Variables / ค่าทั่วไป
+      BINANCE_BASE_URL: ${{ vars.BINANCE_BASE_URL }}
+      BASE_URL: ${{ vars.BASE_URL }}
+      MIRROR_URL: ${{ vars.MIRROR_URL }}
+      PUBLIC_MIRROR_URL: ${{ vars.PUBLIC_MIRROR_URL }}
+      DATA_DIR: ${{ vars.DATA_DIR }}
+      DATA_FILE: ${{ vars.DATA_FILE }}
+      BINANCE_SYMBOLS: ${{ vars.BINANCE_SYMBOLS }}
+      BINANCE_STOCKS: ${{ vars.BINANCE_STOCKS }}
+      ETH_TOKENCONTRACT_USDT: ${{ vars.ETH_TOKENCONTRACT_USDT }}
+      ETH_ADDRESS_SENDER: ${{ vars.ETH_ADDRESS_SENDER }}
+      PAYMENT_BASE_URL: ${{ vars.PAYMENT_BASE_URL }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate required secret presence without printing values
+        run: |
+          set -euo pipefail
+          required_secrets=(
+            BINANCE_API_KEY
+            BINANCE_SECRET_KEY
+            BINANCE_UID
+          )
+          for name in "${required_secrets[@]}"; do
+            if [ -z "${!name:-}" ]; then
+              echo "Missing required secret: $name"
+              exit 1
+            fi
+          done
+          echo "Required secrets are present."
+
+      - name: Show safe runtime summary
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import os
+
+          def mask(value: str) -> str:
+              if not value:
+                  return "(not set)"
+              if len(value) <= 8:
+                  return "*" * len(value)
+              return f"{value[:4]}...{value[-4:]}"
+
+          print("Runtime summary / สรุป runtime")
+          print("BASE_URL                =", os.getenv("BASE_URL") or "https://api.binance.com")
+          print("BINANCE_SYMBOLS         =", os.getenv("BINANCE_SYMBOLS") or "BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT")
+          print("DATA_FILE               =", os.getenv("DATA_FILE") or "data/binance-1h.data")
+          print("BINANCE_UID             =", os.getenv("BINANCE_UID") or "(not set)")
+          print("BINANCE_IP_APILIST      =", os.getenv("BINANCE_IP_APILIST") or "(not set)")
+          print("BINANCE_API_KEY         =", mask(os.getenv("BINANCE_API_KEY", "")))
+          print("BINANCE_SECRET_KEY      =", mask(os.getenv("BINANCE_SECRET_KEY", "")))
+          print("BINANCE_WALLET_RECEIVE  =", "local .env.local only")
+          print("BINANCE_STOCK_MAP set?  =", "yes" if os.getenv("BINANCE_STOCK_MAP") else "no")
+          print("PRIVATE_KEY             =", mask(os.getenv("PRIVATE_KEY", "")))
+          PYEOF

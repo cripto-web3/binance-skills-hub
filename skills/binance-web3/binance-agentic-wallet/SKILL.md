@@ -172,7 +172,7 @@ If the user refers to a US stock by ticker or company name, use the `binance-tok
 | Token        | Address                                      |
 |--------------|----------------------------------------------|
 | ETH (Native) | `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` |
-| USDT         | `0xdAC17F958D2ee523a2206206994597C13D831ec7` |
+| USDT         | `<USDT_CONTRACT_ADDRESS_FROM_ENV>` |
 | USDC         | `0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48` |
 
 ### Base

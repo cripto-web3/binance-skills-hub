@@ -23,7 +23,7 @@ import { maskString } from "./mask_key.js";
 // ── Environment ───────────────────────────────────────────
 const API_KEY = process.env.BINANCE_API_KEY;
 const SECRET_KEY = process.env.BINANCE_SECRET_KEY;
-const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "0xdAC17F958D2ee523a2206206994597C13D831ec7") as Address;
+const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "") as Address;
 const SENDER = (process.env.ETH_ADDRESS_SENDER || "") as Address;
 const RECEIPT = (process.env.ADDRESS_RECEIPT || "") as Address;
 const RPC_URL = process.env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com";
@@ -90,6 +90,10 @@ async function signedBinanceRequest(urlPath: string, params: string): Promise<ob
 // ══════════════════════════════════════════════════════════
 
 async function signAndTransferUsdt(mode: "dry-run" | "send", amountUsdt: number | null) {
+  if (!USDT) {
+    console.error("❌ ยังไม่ได้ตั้งค่า ETH_TOKENCONTRACT_USDT ใน .env");
+    return false;
+  }
   // โหลด PRIVATE_KEY
   const privateKeyHex = process.env.PRIVATE_KEY;
   if (!privateKeyHex) {
@@ -103,6 +107,13 @@ async function signAndTransferUsdt(mode: "dry-run" | "send", amountUsdt: number 
     console.error("❌ PRIVATE_KEY ไม่ถูกต้อง (ต้องเป็น 0x + 64 hex)");
     return false;
   }
+  let usdtAddress: Address;
+  try {
+    usdtAddress = getAddress(USDT);
+  } catch {
+    console.error("❌ ETH_TOKENCONTRACT_USDT ไม่ถูกต้อง (ต้องเป็น address แบบ 0x...)");
+    return false;
+  }
   const keyOwner = getAddress(account.address);
   const senderEip55 = getAddress(SENDER);
   if (keyOwner.toLowerCase() !== senderEip55.toLowerCase()) {
@@ -114,7 +125,7 @@ async function signAndTransferUsdt(mode: "dry-run" | "send", amountUsdt: number 
 
   const publicClient = createPublicClient({ chain: mainnet, transport: http(RPC_URL) });
   const [usdtBalRaw, ethBal, feeData, nonce, chainId] = await Promise.all([
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "balanceOf", args: [keyOwner] }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "balanceOf", args: [keyOwner] }),
     publicClient.getBalance({ address: keyOwner }),
     publicClient.estimateFeesPerGas(),
     publicClient.getTransactionCount({ address: keyOwner }),
@@ -147,7 +158,7 @@ async function signAndTransferUsdt(mode: "dry-run" | "send", amountUsdt: number 
   });
   const signedTx = await account.signTransaction({
     account,
-    to: USDT,
+    to: usdtAddress,
     data: txData,
     chain: mainnet,
     nonce,
