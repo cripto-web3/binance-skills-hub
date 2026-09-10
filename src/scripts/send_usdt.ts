@@ -72,6 +72,26 @@ function formatAmountForDisplay(amount: string): string {
   return fraction ? `${formatCommas(whole)}.${fraction}` : formatCommas(whole);
 }
 
+function normalizeBaseUrl(raw: string): string {
+  const value = String(raw).trim();
+  if (!value) return 'https://api.binance.com';
+  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  return withProtocol.replace(/\/$/, '');
+}
+
+function resolveBaseUrl(env: NodeJS.ProcessEnv): string {
+  const direct = String(env.BINANCE_BASE_URL ?? '').trim();
+  if (direct) return normalizeBaseUrl(direct);
+
+  const allowList = String(env.BINANCE_IP_APILIST ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean);
+  if (allowList.length > 0) return normalizeBaseUrl(allowList[0]);
+
+  return 'https://api.binance.com';
+}
+
 function buildQueryString(params: Record<string, string>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) searchParams.append(key, value);
@@ -187,7 +207,7 @@ function resolveConfig(env = process.env) {
     amount,
     network,
     chainId,
-    baseUrl: String(env.BINANCE_BASE_URL ?? 'https://api.binance.com').trim().replace(/\/$/, ''),
+    baseUrl: resolveBaseUrl(env),
     recvWindow: parseRecvWindow(env.BINANCE_RECV_WINDOW),
     allowLiveTransfer: parseBool(env.BINANCE_ALLOW_LIVE_TRANSFER),
   };

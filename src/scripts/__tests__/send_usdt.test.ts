@@ -213,3 +213,34 @@ test('runSendUsdt loads .env.local before .env', async () => {
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('runSendUsdt uses BINANCE_IP_APILIST as base URL fallback', async () => {
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0xdac17f958d2ee523a2206206994597c13d831ec7',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+    BINANCE_IP_APILIST: '1.2.3.4,5.6.7.8',
+  };
+
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    assert.ok(url.startsWith('https://1.2.3.4/api/v3/account?'));
+    return new Response('{}', { status: 200 });
+  };
+
+  const result = await runSendUsdt({
+    argv: [],
+    env,
+    fetchImpl,
+    now: () => 1700000000000,
+    logger: { log: () => {}, error: () => {} },
+  });
+
+  assert.equal(result.mode, 'dry-run');
+});
