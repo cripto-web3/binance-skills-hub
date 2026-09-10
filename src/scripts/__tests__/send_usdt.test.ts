@@ -60,6 +60,10 @@ test('runSendUsdt dry-run validates credentials and never calls transfer endpoin
     const url = String(input);
     calls.push({ url, method: init?.method });
 
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+
     if (url.startsWith('https://api.binance.com/api/v3/account?')) {
       return new Response('{}', { status: 200 });
     }
@@ -104,6 +108,10 @@ test('runSendUsdt send mode requires confirmation and sends transfer when allowe
     const url = String(input);
     calls.push({ url, method: init?.method });
 
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+
     if (url.startsWith('https://api.binance.com/api/v3/account?')) {
       return new Response('{}', { status: 200 });
     }
@@ -145,7 +153,13 @@ test('runSendUsdt send mode requires confirmation and sends transfer when allowe
 });
 
 test('runSendUsdt accepts requested sender/contract alias variable names', async () => {
-  const fetchImpl: typeof globalThis.fetch = async () => new Response('{}', { status: 200 });
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://192.168.1.1/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    return new Response('{}', { status: 200 });
+  };
   const env = {
     BINANCE_API_KEY: 'testapikey12345678',
     BINANCE_SECRET_KEY: 'testsecret',
@@ -192,6 +206,9 @@ test('runSendUsdt loads .env.local before .env', async () => {
 
     const fetchImpl: typeof globalThis.fetch = async (input, init) => {
       const url = String(input);
+      if (url === 'https://api.binance.com/api/v3/time') {
+        return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+      }
       if (url.startsWith('https://api.binance.com/api/v3/account?')) {
         assert.equal((init?.headers as Record<string, string>)['X-MBX-APIKEY'], 'local_key');
         return new Response('{}', { status: 200 });
@@ -230,6 +247,9 @@ test('runSendUsdt uses BINANCE_IP_APILIST as base URL fallback', async () => {
 
   const fetchImpl: typeof globalThis.fetch = async (input) => {
     const url = String(input);
+    if (url === 'https://1.2.3.4/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
     assert.ok(url.startsWith('https://1.2.3.4/api/v3/account?'));
     return new Response('{}', { status: 200 });
   };
@@ -266,6 +286,9 @@ test('runSendUsdt retries next BINANCE_IP_APILIST entry when first endpoint is u
     if (url.startsWith('https://1.2.3.4/')) {
       throw new Error('connect timeout');
     }
+    if (url === 'https://2.3.4.5/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
     if (url.startsWith('https://2.3.4.5/api/v3/account?')) {
       return new Response('{}', { status: 200 });
     }
@@ -282,5 +305,36 @@ test('runSendUsdt retries next BINANCE_IP_APILIST entry when first endpoint is u
 
   assert.equal(result.mode, 'dry-run');
   assert.equal(hitUrls.some((url) => url.startsWith('https://1.2.3.4/')), true);
+  assert.equal(hitUrls.some((url) => url === 'https://2.3.4.5/api/v3/time'), true);
   assert.equal(hitUrls.some((url) => url.startsWith('https://2.3.4.5/api/v3/account?')), true);
+});
+
+test('runSendUsdt returns timestamp_error when Binance rejects timestamp', async () => {
+  const env = {
+    BINANCE_API_KEY: 'testapikey12345678',
+    BINANCE_SECRET_KEY: 'testsecret',
+    BINANCE_UID: '123456',
+    BINANCE_CREATOR_ADDRESS: '0x1234567890abcdef1234567890abcdef12345678',
+    BINANCE_CONTRACT_ADDRESS: '0x1111111111111111111111111111111111111111',
+    BINANCE_WALLET_RECEIVE: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd',
+    BINANCE_WITHDRAW_AMOUNT: '1000000',
+    BINANCE_NETWORK: 'ETH',
+    BINANCE_CHAIN_ID: '1',
+  };
+
+  const fetchImpl: typeof globalThis.fetch = async (input) => {
+    const url = String(input);
+    if (url === 'https://api.binance.com/api/v3/time') {
+      return new Response(JSON.stringify({ serverTime: 1700000000000 }), { status: 200 });
+    }
+    if (url.startsWith('https://api.binance.com/api/v3/account?')) {
+      return new Response(JSON.stringify({ code: -1021, msg: 'Timestamp for this request is outside of the recvWindow.' }), { status: 400 });
+    }
+    throw new Error(`Unexpected URL: ${url}`);
+  };
+
+  await assert.rejects(
+    runSendUsdt({ argv: [], env, fetchImpl, logger: { log: () => {}, error: () => {} } }),
+    /timestamp/i,
+  );
 });

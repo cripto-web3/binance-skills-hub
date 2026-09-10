@@ -7,6 +7,7 @@ import { pathToFileURL } from 'node:url';
 
 const UNIVERSAL_TRANSFER_PATH = '/sapi/v1/account/universal-transfer';
 const ACCOUNT_VALIDATE_PATH = '/api/v3/account';
+const SERVER_TIME_PATH = '/api/v3/time';
 const ETHEREUM_ADDRESS_PATTERN = /^0x[a-fA-F0-9]{40}$/;
 const UID_PATTERN = /^\d+$/;
 const AMOUNT_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d{1,8})?$/;
@@ -98,6 +99,26 @@ function buildQueryString(params: Record<string, string>): string {
   const searchParams = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) searchParams.append(key, value);
   return searchParams.toString();
+}
+
+async function readResponseTextSafe(response: Response): Promise<string> {
+  try {
+    return (await response.text()).slice(0, 500);
+  } catch {
+    return '';
+  }
+}
+
+function extractBinanceErrorCode(raw: string): number | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const code = Number(parsed?.code);
+    return Number.isFinite(code) ? code : null;
+  } catch {
+    const match = raw.match(/"code"\s*:\s*(-?\d+)/);
+    return match ? Number(match[1]) : null;
+  }
 }
 
 function loadEnvFileIfPresent(envPath: string, env = process.env): void {
@@ -215,9 +236,41 @@ function resolveConfig(env = process.env) {
   };
 }
 
-async function ensureApiCredentials(config: ReturnType<typeof resolveConfig>, fetchImpl = globalThis.fetch, now = Date.now): Promise<void> {
+async function fetchServerTime(config: ReturnType<typeof resolveConfig>, fetchImpl = globalThis.fetch): Promise<number> {
+  let lastError: string | null = null;
+  for (const baseUrl of config.baseUrls) {
+    try {
+      const response = await fetchImpl(`${baseUrl}${SERVER_TIME_PATH}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(30_000),
+      });
+      if (!response.ok) {
+        lastError = `HTTP ${response.status} from ${baseUrl}`;
+        continue;
+      }
+      const json = await response.json().catch(() => ({}));
+      const serverTime = Number(json?.serverTime);
+      if (!Number.isFinite(serverTime) || serverTime <= 0) {
+        lastError = `Invalid serverTime from ${baseUrl}`;
+        continue;
+      }
+      config.activeBaseUrl = baseUrl;
+      return Math.trunc(serverTime);
+    } catch {
+      lastError = `Unable to reach ${baseUrl}`;
+    }
+  }
+
+  throw new SendUsdtError(
+    'network_error',
+    `Unable to sync Binance server time (UTC+0). ${lastError ?? ''} Check BINANCE_BASE_URL/BINANCE_IP_APILIST and Binance API IP whitelist.`,
+  );
+}
+
+async function ensureApiCredentials(config: ReturnType<typeof resolveConfig>, fetchImpl = globalThis.fetch): Promise<number> {
+  const signedTimestamp = await fetchServerTime(config, fetchImpl);
   const query = buildQueryString({
-    timestamp: String(now()),
+    timestamp: String(signedTimestamp),
     recvWindow: config.recvWindow,
   });
   const signature = generateHmacSignature(query, config.secretKey);
@@ -250,8 +303,24 @@ async function ensureApiCredentials(config: ReturnType<typeof resolveConfig>, fe
   }
 
   if (!response.ok) {
+    const body = await readResponseTextSafe(response);
+    const code = extractBinanceErrorCode(body);
+    if (code === -1021) {
+      throw new SendUsdtError(
+        'timestamp_error',
+        'Binance rejected request timestamp. UTC+0 server time sync failed or recvWindow too small; check system time and BINANCE_RECV_WINDOW.',
+      );
+    }
+    if (code === -2014 || code === -2015 || response.status === 401 || response.status === 403) {
+      throw new SendUsdtError(
+        'authentication_failure',
+        'Binance API key login failed. Verify API key/secret permissions and IP whitelist for this runner.',
+      );
+    }
     throw new SendUsdtError('authentication_failure', `Binance API credential validation failed (HTTP ${response.status})`);
   }
+
+  return signedTimestamp;
 }
 
 async function promptConfirm(config: ReturnType<typeof resolveConfig>, promptTimeoutMs = 60_000): Promise<boolean> {
@@ -355,11 +424,11 @@ export async function runSendUsdt({
   loadDotEnvIfPresent(process.cwd(), env);
 
   const config = resolveConfig(env);
-  await ensureApiCredentials(config, fetchImpl, now);
+  const signedTimestamp = await ensureApiCredentials(config, fetchImpl);
 
   const params = buildTransferParams({
     amount: config.amount,
-    timestamp: String(now()),
+    timestamp: String(signedTimestamp),
     recvWindow: config.recvWindow,
   });
 
