@@ -19,7 +19,7 @@ import { mainnet } from "viem/chains";
 import { privateKeyToAccount } from "viem/accounts";
 import { maskString } from "./mask_key.js";
 
-const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "0xdAC17F958D2ee523a2206206994597C13D831ec7") as Address;
+const USDT = (process.env.ETH_TOKENCONTRACT_USDT || "") as Address;
 const SENDER = (process.env.ETH_ADDRESS_SENDER || "") as Address;
 const RECEIPT = (process.env.ADDRESS_RECEIPT || "") as Address;
 const RPC_URL = process.env.ETH_RPC_URL || "https://ethereum-rpc.publicnode.com";
@@ -56,6 +56,11 @@ async function runEcdsaSignUsdt() {
   console.log(`   Mode: ${mode === "send" ? "🔴 SEND REAL TX (MAINNET)" : "🧪 DRY-RUN (ไม่ broadcast)"}  |  ${new Date().toLocaleString("th-TH", { timeZone: "Asia/Bangkok" })}`);
   console.log("============================================================");
 
+  if (!USDT) {
+    console.error("❌ ยังไม่ได้ตั้งค่า ETH_TOKENCONTRACT_USDT ใน .env");
+    process.exit(1);
+  }
+
   // 1. โหลด PRIVATE_KEY จาก .env
   const privateKeyHex = process.env.PRIVATE_KEY;
   if (!privateKeyHex) {
@@ -71,6 +76,13 @@ async function runEcdsaSignUsdt() {
     account = privateKeyToAccount(privateKeyHex as Hex);
   } catch {
     console.error("❌ PRIVATE_KEY ไม่อยู่ในรูปแบบที่ถูกต้อง (ต้องเป็น 0x + 64 hex)");
+    process.exit(1);
+  }
+  let usdtAddress: Address;
+  try {
+    usdtAddress = getAddress(USDT);
+  } catch {
+    console.error("❌ ETH_TOKENCONTRACT_USDT ไม่อยู่ในรูปแบบที่ถูกต้อง (ต้องเป็น 0x...)");
     process.exit(1);
   }
   const keyOwner = getAddress(account.address);
@@ -92,7 +104,7 @@ async function runEcdsaSignUsdt() {
   const publicClient = createPublicClient({ chain: mainnet, transport: http(RPC_URL) });
 
   const [usdtBalRaw, ethBal, feeData, nonce, chainId] = await Promise.all([
-    publicClient.readContract({ address: USDT, abi: ERC20_ABI, functionName: "balanceOf", args: [keyOwner] }),
+    publicClient.readContract({ address: usdtAddress, abi: ERC20_ABI, functionName: "balanceOf", args: [keyOwner] }),
     publicClient.getBalance({ address: keyOwner }),
     publicClient.estimateFeesPerGas(),
     publicClient.getTransactionCount({ address: keyOwner }),
@@ -140,7 +152,7 @@ async function runEcdsaSignUsdt() {
   });
   const tx = {
     account,
-    to: USDT,
+    to: usdtAddress,
     data: txData,
     chain: mainnet,
     nonce,

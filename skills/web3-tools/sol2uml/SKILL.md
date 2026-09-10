@@ -27,7 +27,7 @@ sol2uml flatten <CONTRACT_ADDRESS> --network mainnet --apiKey <ETHERSCAN_API_KEY
 ```
 
 ## 📝 ตัวอย่างการใช้งานกับ USDT (Ethereum Mainnet)
-*   **Address**: `0xdAC17F958D2ee523a2206206994597C13D831ec7`
+*   **Address**: `<USDT_CONTRACT_ADDRESS_FROM_ENV>`
 *   **คำสั่ง**: ดู Storage ของ USDT เพื่อตรวจสอบว่ามีตัวแปรอะไรบ้างและอยู่ที่ Slot ไหน
 
 ## ⚠️ ข้อควรระวัง

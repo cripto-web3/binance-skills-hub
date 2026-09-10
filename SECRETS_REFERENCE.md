@@ -39,7 +39,7 @@ variables ที่โค้ดและ workflows ของ Binance Skills Hub 
 | `DATA_FILE` | Repository variable `DATA_FILE` | No | `data/binance-1h.data` or `data/binance-daily.data` | `scripts/fetch-hourly-data.mjs`, `scripts/fetch-daily-data.mjs` |
 | `BINANCE_SYMBOLS` | Repository variable `BINANCE_SYMBOLS` | No | `BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT` | `scripts/fetch-hourly-data.mjs`, `.github/workflows/binance-1h-data.yml` |
 | `BINANCE_STOCKS` | Repository variable `BINANCE_STOCKS` | No | `GOOGL,AAPL,TSLA` | `scripts/fetch-daily-data.mjs`, `.github/workflows/binance-daily-data.yml` |
-| `ETH_TOKENCONTRACT_USDT` | Repository variable `ETH_TOKENCONTRACT_USDT` | No | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
+| `ETH_TOKENCONTRACT_USDT` | Repository variable `ETH_TOKENCONTRACT_USDT` | No | `0xYOUR_USDT_CONTRACT_ADDRESS` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
 | `ETH_ADDRESS_SENDER` | Repository variable or secret, depending on privacy needs | No by default | `0x...` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts`, `skills/binance-web3/binance-hmac-skill/scripts/hmac_sign.ts` |
 | `ADDRESS_RECEIPT` | Local `.env.local` value, usually paired with `BINANCE_WALLET_RECEIVE` | No by default | `0x...` | `skills/binance-web3/usdt-erc20-transfer/scripts/binance_usdt_transfer.ts`, `ecdsa_sign_usdt.ts`, `full_balance_check.ts` |
 | `PAYMENT_BASE_URL` | Repository variable `PAYMENT_BASE_URL` | No | `https://bpay.binanceapi.com` | `skills/binance/payment/common.py` |

@@ -26,7 +26,7 @@ All sensitive values are read from a `.env` file — never hard-coded.
 | `PRIVATE_KEY` | ECDSA private key (0x + 64 hex) of the sender address |
 | `ETH_ADDRESS_SENDER` | Sender Ethereum address (must match PRIVATE_KEY) |
 | `ADDRESS_RECEIPT` | Recipient address |
-| `ETH_TOKENCONTRACT_USDT` | USDT contract (`0xdAC17F958D2ee523a2206206994597C13D831ec7`) |
+| `ETH_TOKENCONTRACT_USDT` | USDT contract address from `.env` |
 | `BINANCE_API_KEY` | Binance API key (for Binance signed requests) |
 | `BINANCE_SECRET_KEY` | Binance secret key (HMAC-SHA256 signing) |
 | `ETH_RPC_URL` | Optional — public Ethereum RPC URL |

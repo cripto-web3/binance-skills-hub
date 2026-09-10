@@ -102,7 +102,7 @@ defaults:
 | `DATA_FILE` | `data/binance-1h.data` or `data/binance-daily.data` | `data/binance-1h.data` หรือ `data/binance-daily.data` |
 | `BINANCE_SYMBOLS` | `BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT` | `BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT` |
 | `BINANCE_STOCKS` | `GOOGL,AAPL,TSLA` | `GOOGL,AAPL,TSLA` |
-| `ETH_TOKENCONTRACT_USDT` | `0xdAC17F958D2ee523a2206206994597C13D831ec7` | `0xdAC17F958D2ee523a2206206994597C13D831ec7` |
+| `ETH_TOKENCONTRACT_USDT` | `0xYOUR_USDT_CONTRACT_ADDRESS` | `0xYOUR_USDT_CONTRACT_ADDRESS` |
 | `ETH_ADDRESS_SENDER` | sender wallet address | ที่อยู่กระเป๋าผู้ส่ง |
 | `ADDRESS_RECEIPT` | recipient wallet address | ที่อยู่กระเป๋าผู้รับ |
 | `PAYMENT_BASE_URL` | `https://bpay.binanceapi.com` | `https://bpay.binanceapi.com` |
