@@ -79,17 +79,19 @@ function normalizeBaseUrl(raw: string): string {
   return withProtocol.replace(/\/$/, '');
 }
 
-function resolveBaseUrl(env: NodeJS.ProcessEnv): string {
+function buildBaseUrlCandidates(env: NodeJS.ProcessEnv): string[] {
+  const candidates = new Set<string>();
   const direct = String(env.BINANCE_BASE_URL ?? '').trim();
-  if (direct) return normalizeBaseUrl(direct);
+  if (direct) candidates.add(normalizeBaseUrl(direct));
 
-  const allowList = String(env.BINANCE_IP_APILIST ?? '')
-    .split(',')
-    .map((item) => item.trim())
-    .filter(Boolean);
-  if (allowList.length > 0) return normalizeBaseUrl(allowList[0]);
+  for (const item of String(env.BINANCE_IP_APILIST ?? '').split(',')) {
+    const value = item.trim();
+    if (!value) continue;
+    candidates.add(normalizeBaseUrl(value));
+  }
 
-  return 'https://api.binance.com';
+  candidates.add('https://api.binance.com');
+  return [...candidates];
 }
 
 function buildQueryString(params: Record<string, string>): string {
@@ -207,7 +209,7 @@ function resolveConfig(env = process.env) {
     amount,
     network,
     chainId,
-    baseUrl: resolveBaseUrl(env),
+    baseUrls: buildBaseUrlCandidates(env),
     recvWindow: parseRecvWindow(env.BINANCE_RECV_WINDOW),
     allowLiveTransfer: parseBool(env.BINANCE_ALLOW_LIVE_TRANSFER),
   };
@@ -220,19 +222,31 @@ async function ensureApiCredentials(config: ReturnType<typeof resolveConfig>, fe
   });
   const signature = generateHmacSignature(query, config.secretKey);
 
-  const url = `${config.baseUrl}${ACCOUNT_VALIDATE_PATH}?${query}`;
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: 'GET',
-      headers: {
-        'X-MBX-APIKEY': config.apiKey,
-        'X-MBX-SIGNATURE': signature,
-      },
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch (error) {
-    throw new SendUsdtError('network_error', 'Unable to validate Binance API credentials (network/timeout error)');
+  let response: Response | null = null;
+  let lastError: string | null = null;
+  for (const baseUrl of config.baseUrls) {
+    const url = `${baseUrl}${ACCOUNT_VALIDATE_PATH}?${query}`;
+    try {
+      response = await fetchImpl(url, {
+        method: 'GET',
+        headers: {
+          'X-MBX-APIKEY': config.apiKey,
+          'X-MBX-SIGNATURE': signature,
+        },
+        signal: AbortSignal.timeout(30_000),
+      });
+      config.activeBaseUrl = baseUrl;
+      break;
+    } catch {
+      lastError = `Unable to reach ${baseUrl}`;
+    }
+  }
+
+  if (!response) {
+    throw new SendUsdtError(
+      'network_error',
+      `Unable to validate Binance API credentials (network/timeout error). ${lastError ?? ''} Check BINANCE_BASE_URL/BINANCE_IP_APILIST and Binance API IP whitelist.`,
+    );
   }
 
   if (!response.ok) {
@@ -277,20 +291,36 @@ async function sendTransfer(
   fetchImpl = globalThis.fetch,
 ): Promise<{ transactionId: string | null }> {
   const query = buildQueryString(params);
-  const url = `${config.baseUrl}${UNIVERSAL_TRANSFER_PATH}?${query}`;
 
-  let response: Response;
-  try {
-    response = await fetchImpl(url, {
-      method: 'POST',
-      headers: {
-        'X-MBX-APIKEY': config.apiKey,
-        'X-MBX-SIGNATURE': signature,
-      },
-      signal: AbortSignal.timeout(30_000),
-    });
-  } catch {
-    throw new SendUsdtError('network_error', 'Transfer request failed due to network/timeout error');
+  const candidateUrls = [
+    ...(config.activeBaseUrl ? [config.activeBaseUrl] : []),
+    ...config.baseUrls.filter((url) => url !== config.activeBaseUrl),
+  ];
+
+  let response: Response | null = null;
+  let lastError: string | null = null;
+  for (const baseUrl of candidateUrls) {
+    const url = `${baseUrl}${UNIVERSAL_TRANSFER_PATH}?${query}`;
+    try {
+      response = await fetchImpl(url, {
+        method: 'POST',
+        headers: {
+          'X-MBX-APIKEY': config.apiKey,
+          'X-MBX-SIGNATURE': signature,
+        },
+        signal: AbortSignal.timeout(30_000),
+      });
+      break;
+    } catch {
+      lastError = `Unable to reach ${baseUrl}`;
+    }
+  }
+
+  if (!response) {
+    throw new SendUsdtError(
+      'network_error',
+      `Transfer request failed due to network/timeout error. ${lastError ?? ''} Check BINANCE_BASE_URL/BINANCE_IP_APILIST and Binance API IP whitelist.`,
+    );
   }
 
   if (!response.ok) {
