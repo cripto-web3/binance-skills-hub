@@ -56,7 +56,7 @@ try {
 const ONDO_UA = { 'Accept-Encoding': 'identity', 'User-Agent': 'binance-web3/1.1 (Skill)' };
 const BAPI = 'https://www.binance.com/bapi/defi/v1/public/wallet-direct/buw/wallet/market/token/rwa';
 
-class DailyDataError extends Error {
+export class DailyDataError extends Error {
   constructor(code, message, extra = {}) {
     super(message);
     this.name = 'DailyDataError';
@@ -65,7 +65,7 @@ class DailyDataError extends Error {
   }
 }
 
-function redactUrl(url) {
+export function redactUrl(url) {
   try {
     return new URL(url).pathname;
   } catch {
@@ -73,7 +73,7 @@ function redactUrl(url) {
   }
 }
 
-function truncate(text, limit = 180) {
+export function truncate(text, limit = 180) {
   const value = String(text ?? '').trim();
   return value.length > limit ? `${value.slice(0, limit)}…` : value;
 }

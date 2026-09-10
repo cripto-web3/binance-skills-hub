@@ -78,3 +78,16 @@ jobs:
           node-version: 22
       - name: Test daily data safety and signing helpers
         run: npm run binance-daily:test
+
+  test-binance-internal-transfer:
+    name: Test Binance internal transfer helpers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test internal transfer validation and dry-run safety
+        run: npm run binance-internal-transfer:test
