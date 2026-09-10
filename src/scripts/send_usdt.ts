@@ -63,11 +63,6 @@ function parseRecvWindow(value: string | undefined): string {
   return String(num);
 }
 
-function maskApiKey(apiKey: string): string {
-  if (apiKey.length <= 8) return `${apiKey.slice(0, 1)}***${apiKey.slice(-1)}`;
-  return `${apiKey.slice(0, 4)}...${apiKey.slice(-4)}`;
-}
-
 function formatCommas(value: string): string {
   return value.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
@@ -220,6 +215,7 @@ async function promptConfirm(config: ReturnType<typeof resolveConfig>, promptTim
     '⚠️  BINANCE INTERNAL TRANSFER CONFIRMATION',
     '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━',
     `From UID:        ${config.uid}`,
+    `Sender Addr:     ${config.creatorAddress}`,
     `To Wallet:       ${config.walletReceive}`,
     `Amount:          ${formatAmountForDisplay(config.amount)} USDT`,
     'Network:         Ethereum (ERC20, Chain ID 1)',
@@ -314,7 +310,7 @@ export async function runSendUsdt({
     const preview = {
       method: 'POST',
       endpoint: UNIVERSAL_TRANSFER_PATH,
-      apiKey: maskApiKey(config.apiKey),
+      apiKey: '[redacted]',
       signature: '[redacted]',
       params: {
         ...params,
